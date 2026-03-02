@@ -2,64 +2,76 @@ import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text, View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useAuth } from '../hooks/useAuth';
+import { useSubscription } from '../hooks/useSubscription';
+import { useTheme } from '../context/ThemeContext';
+import { AuthHomeScreen } from '../screens/AuthHomeScreen';
 import { LoginScreen } from '../screens/LoginScreen';
+import { EmailConfirmationScreen } from '../screens/EmailConfirmationScreen';
 import { TodayScreen } from '../screens/TodayScreen';
 import { TrackingScreen } from '../screens/TrackingScreen';
-import { LibraryScreen } from '../screens/LibraryScreen';
-import { ProfileScreen } from '../screens/ProfileScreen';
+import { MacrosScreen } from '../screens/MacrosScreen';
+import { PaywallScreen } from '../screens/onboarding/PaywallScreen';
 import { OnboardingNavigator } from './OnboardingNavigator';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-function TabIcon({ name, focused }: { name: string; focused: boolean }) {
-  const icons: Record<string, string> = {
-    Today: '📅',
-    Tracking: '📊',
-    Library: '📚',
-    Profile: '👤',
-  };
-
-  return (
-    <View style={{ alignItems: 'center' }}>
-      <Text style={{ fontSize: 20 }}>{icons[name]}</Text>
-      <Text
-        style={{
-          fontSize: 10,
-          color: focused ? '#3b82f6' : '#9ca3af',
-          marginTop: 2,
-        }}
-      >
-        {name}
-      </Text>
-    </View>
-  );
-}
-
 function MainTabs() {
+  const { colors } = useTheme();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused }) => (
-          <TabIcon name={route.name} focused={focused} />
-        ),
-        tabBarShowLabel: false,
+        tabBarIcon: ({ focused, size }) => {
+          let iconName: keyof typeof Ionicons.glyphMap;
+
+          switch (route.name) {
+            case 'Today':
+              iconName = focused ? 'today' : 'today-outline';
+              break;
+            case 'Tracking':
+              iconName = focused ? 'stats-chart' : 'stats-chart-outline';
+              break;
+            case 'Macros':
+              iconName = focused ? 'nutrition' : 'nutrition-outline';
+              break;
+            default:
+              iconName = 'ellipse';
+          }
+
+          return (
+            <Ionicons
+              name={iconName}
+              size={24}
+              color={focused ? colors.primary : colors.textMuted}
+            />
+          );
+        },
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textMuted,
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '500',
+        },
         tabBarStyle: {
           height: 80,
-          paddingTop: 12,
+          paddingTop: 8,
           paddingBottom: 20,
           borderTopWidth: 1,
-          borderTopColor: '#e5e7eb',
+          borderTopColor: colors.border,
+          backgroundColor: colors.card,
         },
         headerStyle: {
-          backgroundColor: '#fff',
+          backgroundColor: colors.card,
         },
         headerTitleStyle: {
           fontWeight: '600',
+          color: colors.text,
         },
       })}
     >
@@ -78,17 +90,11 @@ function MainTabs() {
         }}
       />
       <Tab.Screen
-        name="Library"
-        component={LibraryScreen}
+        name="Macros"
+        component={MacrosScreen}
         options={{
-          title: 'Food Library',
-        }}
-      />
-      <Tab.Screen
-        name="Profile"
-        component={ProfileScreen}
-        options={{
-          title: 'Profile',
+          title: 'Macros',
+          headerShown: false,
         }}
       />
     </Tab.Navigator>
@@ -96,15 +102,19 @@ function MainTabs() {
 }
 
 function LoadingScreen() {
+  const { colors } = useTheme();
+
   return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
-      <ActivityIndicator size="large" color="#3b82f6" />
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.card }}>
+      <ActivityIndicator size="large" color={colors.primary} />
     </View>
   );
 }
 
 export function AppNavigator() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, pendingConfirmationEmail, clearPendingConfirmation } = useAuth();
+  const { isSubscribed, isLoading: subscriptionLoading } = useSubscription();
+  const { colors } = useTheme();
   const [onboardingComplete, setOnboardingComplete] = useState<boolean | null>(null);
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
 
@@ -120,7 +130,8 @@ export function AppNavigator() {
     }
 
     try {
-      const status = await AsyncStorage.getItem('onboarding_complete');
+      // Use user-specific key so each user gets their own onboarding status
+      const status = await AsyncStorage.getItem(`onboarding_complete_${user.id}`);
       setOnboardingComplete(status === 'true');
     } catch (err) {
       console.error('Error checking onboarding status:', err);
@@ -134,18 +145,53 @@ export function AppNavigator() {
     setOnboardingComplete(true);
   };
 
-  if (authLoading || checkingOnboarding) {
+  if (authLoading || checkingOnboarding || (user && subscriptionLoading)) {
     return <LoadingScreen />;
+  }
+
+  // Show email confirmation screen if pending
+  if (pendingConfirmationEmail) {
+    return (
+      <EmailConfirmationScreen
+        email={pendingConfirmationEmail}
+        onBackToLogin={clearPendingConfirmation}
+      />
+    );
   }
 
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!user ? (
-          <Stack.Screen name="Login" component={LoginScreen} />
+          <>
+            <Stack.Screen name="AuthHome">
+              {(props) => (
+                <AuthHomeScreen
+                  onNavigateToEmail={() => props.navigation.navigate('Login')}
+                />
+              )}
+            </Stack.Screen>
+            <Stack.Screen
+              name="Login"
+              component={LoginScreen}
+              options={{
+                headerShown: true,
+                headerTitle: '',
+                headerBackTitle: '',
+                headerShadowVisible: false,
+                headerStyle: { backgroundColor: colors.background },
+                headerTintColor: colors.text,
+                animation: 'slide_from_right',
+              }}
+            />
+          </>
         ) : !onboardingComplete ? (
           <Stack.Screen name="Onboarding">
             {() => <OnboardingNavigator onComplete={handleOnboardingComplete} />}
+          </Stack.Screen>
+        ) : !isSubscribed ? (
+          <Stack.Screen name="StandalonePaywall">
+            {() => <PaywallScreen standalone onSubscribed={handleOnboardingComplete} />}
           </Stack.Screen>
         ) : (
           <Stack.Screen name="Main" component={MainTabs} />

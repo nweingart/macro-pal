@@ -8,14 +8,82 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Platform,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../context/ThemeContext';
 import { api } from '../services/api';
 import { UserProfile } from '../types';
+import { toISODate } from '../utils/date';
 
 type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
 type DietPlan = 'maintain' | 'lose' | 'gain';
 type Gender = 'male' | 'female' | 'other';
+
+// Macro calculation helper component
+function MacroCalculation({ calories, protein, carbs, fat, colors }: {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  colors: any;
+}) {
+  const proteinCals = protein * 4;
+  const carbsCals = carbs * 4;
+  const fatCals = fat * 9;
+  const totalMacroCals = proteinCals + carbsCals + fatCals;
+  const difference = calories - totalMacroCals;
+
+  if (calories === 0 && protein === 0 && carbs === 0 && fat === 0) {
+    return null;
+  }
+
+  const isBalanced = Math.abs(difference) <= 50; // Allow 50 cal tolerance
+  const isOver = difference < -50;
+
+  return (
+    <View style={[styles.macroCalcBox, {
+      backgroundColor: isBalanced ? '#ECFDF5' : isOver ? '#FEF2F2' : '#FEF3C7',
+      marginTop: 16,
+    }]}>
+      <Text style={[styles.macroCalcTitle, {
+        color: isBalanced ? '#065F46' : isOver ? '#991B1B' : '#92400E'
+      }]}>
+        Calorie Breakdown
+      </Text>
+      <View style={styles.macroCalcRow}>
+        <Text style={styles.macroCalcItem}>Protein: {protein}g × 4 = {proteinCals} cal</Text>
+      </View>
+      <View style={styles.macroCalcRow}>
+        <Text style={styles.macroCalcItem}>Carbs: {carbs}g × 4 = {carbsCals} cal</Text>
+      </View>
+      <View style={styles.macroCalcRow}>
+        <Text style={styles.macroCalcItem}>Fat: {fat}g × 9 = {fatCals} cal</Text>
+      </View>
+      <View style={[styles.macroCalcRow, styles.macroCalcTotal]}>
+        <Text style={[styles.macroCalcItem, { fontWeight: '600' }]}>
+          Total: {totalMacroCals} / {calories} cal
+        </Text>
+      </View>
+      {!isBalanced && (
+        <Text style={[styles.macroCalcWarning, {
+          color: isOver ? '#991B1B' : '#92400E'
+        }]}>
+          {isOver
+            ? `Macros exceed calories by ${Math.abs(difference)} cal. Reduce macros or increase calorie target.`
+            : `${difference} calories unaccounted for. Add more protein, carbs, or fat.`
+          }
+        </Text>
+      )}
+      {isBalanced && (
+        <Text style={[styles.macroCalcWarning, { color: '#065F46' }]}>
+          Macros are balanced with your calorie target.
+        </Text>
+      )}
+    </View>
+  );
+}
 
 const ACTIVITY_LEVELS: { value: ActivityLevel; label: string }[] = [
   { value: 'sedentary', label: 'Sedentary' },
@@ -37,13 +105,33 @@ const GENDERS: { value: Gender; label: string }[] = [
   { value: 'other', label: 'Other' },
 ];
 
+function formatBirthday(date: Date): string {
+  const months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+  ];
+  return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+}
+
+function calculateAge(birthday: Date): number {
+  const today = new Date();
+  let age = today.getFullYear() - birthday.getFullYear();
+  const monthDiff = today.getMonth() - birthday.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthday.getDate())) {
+    age--;
+  }
+  return age;
+}
+
 export function ProfileScreen() {
+  const { colors, radius, shadows } = useTheme();
   const { signOut, user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const [gender, setGender] = useState<Gender | null>(null);
-  const [age, setAge] = useState('');
+  const [birthday, setBirthday] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [heightFeet, setHeightFeet] = useState('');
   const [heightInches, setHeightInches] = useState('');
   const [weight, setWeight] = useState('');
@@ -64,7 +152,9 @@ export function ProfileScreen() {
       const profile = await api.getProfile();
       if (profile) {
         setGender(profile.gender as Gender);
-        setAge(profile.age ? String(profile.age) : '');
+        if (profile.birthday) {
+          setBirthday(new Date(profile.birthday));
+        }
         if (profile.height_inches) {
           setHeightFeet(String(Math.floor(profile.height_inches / 12)));
           setHeightInches(String(profile.height_inches % 12));
@@ -92,7 +182,7 @@ export function ProfileScreen() {
 
       await api.updateProfile({
         gender,
-        age: parseInt(age) || null,
+        birthday: birthday ? toISODate(birthday) : null,
         height_inches: heightTotal || null,
         weight_lbs: parseFloat(weight) || null,
         activity_level: activityLevel,
@@ -111,6 +201,21 @@ export function ProfileScreen() {
     }
   };
 
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+    if (selectedDate) {
+      setBirthday(selectedDate);
+    }
+  };
+
+  const maxDate = new Date();
+  maxDate.setFullYear(maxDate.getFullYear() - 13);
+
+  const minDate = new Date();
+  minDate.setFullYear(minDate.getFullYear() - 120);
+
   const handleSignOut = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
       { text: 'Cancel', style: 'cancel' },
@@ -118,34 +223,79 @@ export function ProfileScreen() {
     ]);
   };
 
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to delete your account? This will permanently delete all your data including your food log, food library, and profile. This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete Account',
+          style: 'destructive',
+          onPress: () => {
+            // Second confirmation
+            Alert.alert(
+              'Final Confirmation',
+              'This is your last chance. All your data will be permanently deleted.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Yes, Delete My Account',
+                  style: 'destructive',
+                  onPress: deleteAccount,
+                },
+              ]
+            );
+          },
+        },
+      ]
+    );
+  };
+
+  const deleteAccount = async () => {
+    try {
+      setSaving(true);
+      await api.deleteAccount();
+      // Sign out after deletion (server-side auth is already deleted)
+      await signOut();
+    } catch (err) {
+      Alert.alert('Error', 'Failed to delete account. Please try again.');
+      setSaving(false);
+    }
+  };
+
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" />
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Body Stats</Text>
+    <ScrollView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      contentContainerStyle={styles.content}
+    >
+      <View style={[styles.section, { backgroundColor: colors.card, borderRadius: radius.md }, shadows.small]}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Body Stats</Text>
 
-        <Text style={styles.label}>Gender</Text>
+        <Text style={[styles.label, { color: colors.text }]}>Gender</Text>
         <View style={styles.buttonGroup}>
           {GENDERS.map((g) => (
             <TouchableOpacity
               key={g.value}
               style={[
                 styles.optionButton,
-                gender === g.value && styles.optionButtonActive,
+                { backgroundColor: gender === g.value ? colors.primary : colors.borderLight, borderRadius: radius.sm },
               ]}
               onPress={() => setGender(g.value)}
             >
               <Text
                 style={[
                   styles.optionButtonText,
-                  gender === g.value && styles.optionButtonTextActive,
+                  { color: gender === g.value ? colors.white : colors.textSecondary },
+                  gender === g.value && { fontWeight: '500' },
                 ]}
               >
                 {g.label}
@@ -154,63 +304,86 @@ export function ProfileScreen() {
           ))}
         </View>
 
-        <Text style={styles.label}>Age</Text>
-        <TextInput
-          style={styles.input}
-          value={age}
-          onChangeText={setAge}
-          keyboardType="numeric"
-          placeholder="30"
-        />
+        <Text style={[styles.label, { color: colors.text }]}>Birthday</Text>
+        <TouchableOpacity
+          style={[styles.birthdayButton, { backgroundColor: colors.background, borderColor: colors.border, borderRadius: radius.sm }]}
+          onPress={() => setShowDatePicker(true)}
+        >
+          <Text style={[styles.birthdayText, { color: birthday ? colors.text : colors.textMuted }]}>
+            {birthday ? formatBirthday(birthday) : 'Select birthday'}
+          </Text>
+          {birthday && (
+            <Text style={[styles.ageDisplay, { color: colors.textSecondary }]}>
+              ({calculateAge(birthday)} years old)
+            </Text>
+          )}
+        </TouchableOpacity>
+        {showDatePicker && (
+          <DateTimePicker
+            value={birthday || new Date(Date.now() - 30 * 365 * 24 * 60 * 60 * 1000)}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={handleDateChange}
+            maximumDate={maxDate}
+            minimumDate={minDate}
+          />
+        )}
 
-        <Text style={styles.label}>Height</Text>
+        <Text style={[styles.label, { color: colors.text }]}>Height</Text>
         <View style={styles.heightRow}>
           <View style={styles.heightField}>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, borderRadius: radius.sm, color: colors.text }]}
               value={heightFeet}
               onChangeText={setHeightFeet}
               keyboardType="numeric"
               placeholder="5"
+              placeholderTextColor={colors.textMuted}
+              maxLength={1}
             />
-            <Text style={styles.heightUnit}>ft</Text>
+            <Text style={[styles.heightUnit, { color: colors.textSecondary }]}>ft</Text>
           </View>
           <View style={styles.heightField}>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, borderRadius: radius.sm, color: colors.text }]}
               value={heightInches}
               onChangeText={setHeightInches}
               keyboardType="numeric"
               placeholder="10"
+              placeholderTextColor={colors.textMuted}
+              maxLength={2}
             />
-            <Text style={styles.heightUnit}>in</Text>
+            <Text style={[styles.heightUnit, { color: colors.textSecondary }]}>in</Text>
           </View>
         </View>
 
-        <Text style={styles.label}>Weight (lbs)</Text>
+        <Text style={[styles.label, { color: colors.text }]}>Weight (lbs)</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, borderRadius: radius.sm, color: colors.text }]}
           value={weight}
           onChangeText={setWeight}
           keyboardType="numeric"
           placeholder="170"
+          placeholderTextColor={colors.textMuted}
+          maxLength={4}
         />
 
-        <Text style={styles.label}>Activity Level</Text>
+        <Text style={[styles.label, { color: colors.text }]}>Activity Level</Text>
         <View style={styles.buttonGroup}>
           {ACTIVITY_LEVELS.map((level) => (
             <TouchableOpacity
               key={level.value}
               style={[
                 styles.optionButton,
-                activityLevel === level.value && styles.optionButtonActive,
+                { backgroundColor: activityLevel === level.value ? colors.primary : colors.borderLight, borderRadius: radius.sm },
               ]}
               onPress={() => setActivityLevel(level.value)}
             >
               <Text
                 style={[
                   styles.optionButtonText,
-                  activityLevel === level.value && styles.optionButtonTextActive,
+                  { color: activityLevel === level.value ? colors.white : colors.textSecondary },
+                  activityLevel === level.value && { fontWeight: '500' },
                 ]}
               >
                 {level.label}
@@ -219,21 +392,22 @@ export function ProfileScreen() {
           ))}
         </View>
 
-        <Text style={styles.label}>Goal</Text>
+        <Text style={[styles.label, { color: colors.text }]}>Goal</Text>
         <View style={styles.buttonGroup}>
           {DIET_PLANS.map((plan) => (
             <TouchableOpacity
               key={plan.value}
               style={[
                 styles.optionButton,
-                dietPlan === plan.value && styles.optionButtonActive,
+                { backgroundColor: dietPlan === plan.value ? colors.primary : colors.borderLight, borderRadius: radius.sm },
               ]}
               onPress={() => setDietPlan(plan.value)}
             >
               <Text
                 style={[
                   styles.optionButtonText,
-                  dietPlan === plan.value && styles.optionButtonTextActive,
+                  { color: dietPlan === plan.value ? colors.white : colors.textSecondary },
+                  dietPlan === plan.value && { fontWeight: '500' },
                 ]}
               >
                 {plan.label}
@@ -243,68 +417,92 @@ export function ProfileScreen() {
         </View>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Daily Targets</Text>
+      <View style={[styles.section, { backgroundColor: colors.card, borderRadius: radius.md }, shadows.small]}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Daily Targets</Text>
 
-        <Text style={styles.label}>Calories</Text>
+        <Text style={[styles.label, { color: colors.text }]}>Calories</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, borderRadius: radius.sm, color: colors.text }]}
           value={calorieTarget}
           onChangeText={setCalorieTarget}
           keyboardType="numeric"
           placeholder="2000"
+          placeholderTextColor={colors.textMuted}
+          maxLength={5}
         />
 
         <View style={styles.macroRow}>
           <View style={styles.macroField}>
-            <Text style={styles.label}>Protein (g)</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Protein (g)</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, borderRadius: radius.sm, color: colors.text }]}
               value={proteinTarget}
               onChangeText={setProteinTarget}
               keyboardType="numeric"
               placeholder="150"
+              placeholderTextColor={colors.textMuted}
+              maxLength={4}
             />
           </View>
           <View style={styles.macroField}>
-            <Text style={styles.label}>Carbs (g)</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Carbs (g)</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, borderRadius: radius.sm, color: colors.text }]}
               value={carbsTarget}
               onChangeText={setCarbsTarget}
               keyboardType="numeric"
               placeholder="200"
+              placeholderTextColor={colors.textMuted}
+              maxLength={4}
             />
           </View>
           <View style={styles.macroField}>
-            <Text style={styles.label}>Fat (g)</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Fat (g)</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, borderRadius: radius.sm, color: colors.text }]}
               value={fatTarget}
               onChangeText={setFatTarget}
               keyboardType="numeric"
               placeholder="65"
+              placeholderTextColor={colors.textMuted}
+              maxLength={4}
             />
           </View>
         </View>
+
+        <MacroCalculation
+          calories={parseInt(calorieTarget) || 0}
+          protein={parseInt(proteinTarget) || 0}
+          carbs={parseInt(carbsTarget) || 0}
+          fat={parseInt(fatTarget) || 0}
+          colors={colors}
+        />
       </View>
 
       <TouchableOpacity
-        style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+        style={[
+          styles.saveButton,
+          { backgroundColor: saving ? colors.textMuted : colors.primary, borderRadius: radius.md },
+        ]}
         onPress={handleSave}
         disabled={saving}
       >
         {saving ? (
-          <ActivityIndicator color="#fff" />
+          <ActivityIndicator color={colors.white} />
         ) : (
-          <Text style={styles.saveButtonText}>Save Profile</Text>
+          <Text style={[styles.saveButtonText, { color: colors.white }]}>Save Profile</Text>
         )}
       </TouchableOpacity>
 
-      <View style={styles.accountSection}>
-        <Text style={styles.emailText}>{user?.email}</Text>
+      <View style={[styles.accountSection, { borderTopColor: colors.border }]}>
+        <Text style={[styles.emailText, { color: colors.textSecondary }]}>{user?.email}</Text>
         <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-          <Text style={styles.signOutButtonText}>Sign Out</Text>
+          <Text style={[styles.signOutButtonText, { color: colors.error }]}>Sign Out</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.deleteAccountButton} onPress={handleDeleteAccount}>
+          <Text style={[styles.deleteAccountButtonText, { color: colors.textMuted }]}>
+            Delete Account
+          </Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -314,7 +512,6 @@ export function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
   },
   content: {
     padding: 16,
@@ -326,36 +523,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   section: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
     padding: 16,
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#111827',
     marginBottom: 16,
   },
   label: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#374151',
     marginBottom: 6,
     marginTop: 12,
   },
   input: {
-    backgroundColor: '#f9fafb',
-    borderRadius: 8,
     padding: 12,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+  },
+  birthdayButton: {
+    padding: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  birthdayText: {
+    fontSize: 16,
+  },
+  ageDisplay: {
+    fontSize: 14,
   },
   buttonGroup: {
     flexDirection: 'row',
@@ -365,19 +563,9 @@ const styles = StyleSheet.create({
   optionButton: {
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: '#f3f4f6',
-  },
-  optionButtonActive: {
-    backgroundColor: '#3b82f6',
   },
   optionButtonText: {
     fontSize: 14,
-    color: '#6b7280',
-  },
-  optionButtonTextActive: {
-    color: '#fff',
-    fontWeight: '500',
   },
   heightRow: {
     flexDirection: 'row',
@@ -391,7 +579,6 @@ const styles = StyleSheet.create({
   heightUnit: {
     marginLeft: 8,
     fontSize: 16,
-    color: '#6b7280',
   },
   macroRow: {
     flexDirection: 'row',
@@ -401,17 +588,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   saveButton: {
-    backgroundColor: '#3b82f6',
-    borderRadius: 12,
     padding: 16,
     alignItems: 'center',
     marginBottom: 24,
   },
-  saveButtonDisabled: {
-    backgroundColor: '#9ca3af',
-  },
   saveButtonText: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -419,19 +600,50 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
   },
   emailText: {
     fontSize: 14,
-    color: '#6b7280',
     marginBottom: 12,
   },
   signOutButton: {
     padding: 12,
   },
   signOutButtonText: {
-    color: '#ef4444',
     fontSize: 16,
     fontWeight: '500',
+  },
+  deleteAccountButton: {
+    padding: 12,
+    marginTop: 8,
+  },
+  deleteAccountButtonText: {
+    fontSize: 14,
+  },
+  macroCalcBox: {
+    borderRadius: 12,
+    padding: 16,
+  },
+  macroCalcTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  macroCalcRow: {
+    paddingVertical: 2,
+  },
+  macroCalcItem: {
+    fontSize: 13,
+    color: '#374151',
+  },
+  macroCalcTotal: {
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    marginTop: 8,
+    paddingTop: 8,
+  },
+  macroCalcWarning: {
+    fontSize: 13,
+    marginTop: 8,
+    fontStyle: 'italic',
   },
 });

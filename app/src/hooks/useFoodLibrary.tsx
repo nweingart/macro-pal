@@ -13,8 +13,10 @@ export function useFoodLibrary() {
       setError(null);
       const data = await api.getFoods();
       setFoods(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch foods');
+    } catch (err: any) {
+      if (err?.response?.status !== 401) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch foods');
+      }
     } finally {
       setLoading(false);
     }
@@ -30,8 +32,10 @@ export function useFoodLibrary() {
       await api.updateFood(id, updates);
       await fetchFoods();
       return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update food');
+    } catch (err: any) {
+      if (err?.response?.status !== 401) {
+        setError(err instanceof Error ? err.message : 'Failed to update food');
+      }
       return false;
     }
   };
@@ -42,8 +46,10 @@ export function useFoodLibrary() {
       await api.deleteFood(id);
       await fetchFoods();
       return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete food');
+    } catch (err: any) {
+      if (err?.response?.status !== 401) {
+        setError(err instanceof Error ? err.message : 'Failed to delete food');
+      }
       return false;
     }
   };

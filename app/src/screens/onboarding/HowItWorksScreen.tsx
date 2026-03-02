@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { OnboardingLayout } from '../../components/OnboardingLayout';
 
 interface Props {
@@ -32,7 +33,7 @@ export function HowItWorksScreen({ onContinue, onBack }: Props) {
           </View>
 
           <View style={styles.arrow}>
-            <Text style={styles.arrowText}>✨ AI Magic ✨</Text>
+            <Ionicons name="arrow-down" size={24} color="#9CA3AF" />
           </View>
 
           <View style={styles.outputDemo}>
@@ -60,15 +61,15 @@ export function HowItWorksScreen({ onContinue, onBack }: Props) {
 
         <View style={styles.benefitsList}>
           <View style={styles.benefitItem}>
-            <Text style={styles.benefitIcon}>⚡</Text>
+            <Ionicons name="flash" size={20} color="#3B82F6" style={styles.benefitIcon} />
             <Text style={styles.benefitText}>Log meals in seconds</Text>
           </View>
           <View style={styles.benefitItem}>
-            <Text style={styles.benefitIcon}>🧠</Text>
+            <Ionicons name="bulb" size={20} color="#3B82F6" style={styles.benefitIcon} />
             <Text style={styles.benefitText}>AI understands portions naturally</Text>
           </View>
           <View style={styles.benefitItem}>
-            <Text style={styles.benefitIcon}>📚</Text>
+            <Ionicons name="bookmark" size={20} color="#3B82F6" style={styles.benefitIcon} />
             <Text style={styles.benefitText}>Learns your favorite foods</Text>
           </View>
         </View>
@@ -187,7 +188,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   benefitIcon: {
-    fontSize: 20,
     marginRight: 12,
   },
   benefitText: {

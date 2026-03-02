@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,14 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import {
+  ExpoSpeechRecognitionModule,
+  useSpeechRecognitionEvent,
+} from 'expo-speech-recognition';
 import { Food } from '../types';
+import { useTheme } from '../context/ThemeContext';
 
 interface AddFoodModalProps {
   visible: boolean;
@@ -28,9 +35,78 @@ export function AddFoodModal({
   foods,
   loading = false,
 }: AddFoodModalProps) {
+  const { colors, radius, spacing } = useTheme();
   const [input, setInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [mode, setMode] = useState<'input' | 'library'>('input');
+  const [isListening, setIsListening] = useState(false);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+
+  // Check permission on mount
+  useEffect(() => {
+    const checkPermission = async () => {
+      const result = await ExpoSpeechRecognitionModule.getPermissionsAsync();
+      setHasPermission(result.granted);
+    };
+    checkPermission();
+  }, []);
+
+  // Speech recognition events
+  useSpeechRecognitionEvent('start', () => {
+    setIsListening(true);
+  });
+
+  useSpeechRecognitionEvent('end', () => {
+    setIsListening(false);
+  });
+
+  useSpeechRecognitionEvent('result', (event) => {
+    if (event.results && event.results.length > 0) {
+      const transcript = event.results[0]?.transcript;
+      if (transcript) {
+        setInput(transcript);
+      }
+    }
+  });
+
+  useSpeechRecognitionEvent('error', (event) => {
+    console.error('Speech recognition error:', event.error);
+    setIsListening(false);
+  });
+
+  const startListening = async () => {
+    if (hasPermission !== true) {
+      const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+      setHasPermission(result.granted);
+      if (!result.granted) return;
+    }
+
+    try {
+      await ExpoSpeechRecognitionModule.start({
+        lang: 'en-US',
+        interimResults: true,
+        maxAlternatives: 1,
+      });
+    } catch (err) {
+      console.error('Failed to start speech recognition:', err);
+    }
+  };
+
+  const stopListening = async () => {
+    try {
+      await ExpoSpeechRecognitionModule.stop();
+    } catch (err) {
+      console.error('Failed to stop speech recognition:', err);
+    }
+  };
+
+  const toggleListening = () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening();
+    }
+  };
 
   const filteredFoods = foods.filter((food) =>
     food.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -51,6 +127,9 @@ export function AddFoodModal({
   };
 
   const handleClose = () => {
+    if (isListening) {
+      stopListening();
+    }
     setInput('');
     setSearchQuery('');
     setMode('input');
@@ -64,32 +143,39 @@ export function AddFoodModal({
       presentationStyle="pageSheet"
       onRequestClose={handleClose}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
-      >
-        <View style={styles.header}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['bottom']}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.container}
+        >
+        <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
           <TouchableOpacity onPress={handleClose}>
-            <Text style={styles.cancelButton}>Cancel</Text>
+            <Text style={[styles.cancelButton, { color: colors.primary }]}>Cancel</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>Add Food</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Add Food</Text>
           <View style={{ width: 60 }} />
         </View>
 
         <View style={styles.tabContainer}>
           <TouchableOpacity
-            style={[styles.tab, mode === 'input' && styles.activeTab]}
+            style={[
+              styles.tab,
+              { backgroundColor: mode === 'input' ? colors.primary : colors.border, borderRadius: radius.sm },
+            ]}
             onPress={() => setMode('input')}
           >
-            <Text style={[styles.tabText, mode === 'input' && styles.activeTabText]}>
+            <Text style={[styles.tabText, { color: mode === 'input' ? colors.white : colors.textSecondary }]}>
               Describe
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.tab, mode === 'library' && styles.activeTab]}
+            style={[
+              styles.tab,
+              { backgroundColor: mode === 'library' ? colors.primary : colors.border, borderRadius: radius.sm },
+            ]}
             onPress={() => setMode('library')}
           >
-            <Text style={[styles.tabText, mode === 'library' && styles.activeTabText]}>
+            <Text style={[styles.tabText, { color: mode === 'library' ? colors.white : colors.textSecondary }]}>
               Library
             </Text>
           </TouchableOpacity>
@@ -97,33 +183,80 @@ export function AddFoodModal({
 
         {mode === 'input' ? (
           <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.textInput}
-              placeholder="e.g., 2 eggs, bowl of oatmeal with berries"
-              placeholderTextColor="#9ca3af"
-              value={input}
-              onChangeText={setInput}
-              multiline
-              autoFocus
-            />
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={[
+                  styles.textInput,
+                  {
+                    backgroundColor: colors.card,
+                    borderRadius: radius.md,
+                    borderColor: colors.border,
+                    color: colors.text,
+                  },
+                ]}
+                placeholder="e.g., 2 eggs, bowl of oatmeal with berries"
+                placeholderTextColor={colors.textMuted}
+                value={input}
+                onChangeText={setInput}
+                multiline
+                autoFocus={!isListening}
+              />
+              <TouchableOpacity
+                style={[
+                  styles.micButton,
+                  {
+                    backgroundColor: isListening ? '#DC2626' : colors.primaryLight || '#EFF6FF',
+                    borderColor: isListening ? '#DC2626' : colors.primary,
+                  },
+                ]}
+                onPress={toggleListening}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name={isListening ? 'mic' : 'mic-outline'}
+                  size={22}
+                  color={isListening ? '#FFFFFF' : colors.primary}
+                />
+              </TouchableOpacity>
+              {isListening && (
+                <View style={[styles.listeningOverlay, { borderRadius: radius.md }]}>
+                  <Ionicons name="mic" size={32} color="#DC2626" />
+                  <Text style={styles.listeningText}>Listening...</Text>
+                </View>
+              )}
+            </View>
             <TouchableOpacity
-              style={[styles.submitButton, !input.trim() && styles.submitButtonDisabled]}
+              style={[
+                styles.submitButton,
+                {
+                  backgroundColor: input.trim() ? colors.primary : colors.textMuted,
+                  borderRadius: radius.md,
+                },
+              ]}
               onPress={handleSubmit}
               disabled={!input.trim() || loading}
             >
               {loading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={colors.white} />
               ) : (
-                <Text style={styles.submitButtonText}>Add</Text>
+                <Text style={[styles.submitButtonText, { color: colors.white }]}>Add</Text>
               )}
             </TouchableOpacity>
           </View>
         ) : (
           <View style={styles.libraryContainer}>
             <TextInput
-              style={styles.searchInput}
+              style={[
+                styles.searchInput,
+                {
+                  backgroundColor: colors.card,
+                  borderRadius: radius.md,
+                  borderColor: colors.border,
+                  color: colors.text,
+                },
+              ]}
               placeholder="Search your foods..."
-              placeholderTextColor="#9ca3af"
+              placeholderTextColor={colors.textMuted}
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
@@ -132,27 +265,28 @@ export function AddFoodModal({
               keyExtractor={(item) => item.id}
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  style={styles.foodItem}
+                  style={[styles.foodItem, { backgroundColor: colors.card, borderRadius: radius.md }]}
                   onPress={() => handleSelectFood(item)}
                 >
                   <View>
-                    <Text style={styles.foodName}>{item.name}</Text>
-                    <Text style={styles.foodServing}>
+                    <Text style={[styles.foodName, { color: colors.text }]}>{item.name}</Text>
+                    <Text style={[styles.foodServing, { color: colors.textSecondary }]}>
                       {item.serving_unit} · {item.calories_per_serving} kcal
                     </Text>
                   </View>
-                  <Text style={styles.timesUsed}>Used {item.times_used}x</Text>
+                  <Text style={[styles.timesUsed, { color: colors.textMuted }]}>Used {item.times_used}x</Text>
                 </TouchableOpacity>
               )}
               ListEmptyComponent={
-                <Text style={styles.emptyText}>
+                <Text style={[styles.emptyText, { color: colors.textMuted }]}>
                   {searchQuery ? 'No foods found' : 'Your food library is empty'}
                 </Text>
               }
             />
           </View>
         )}
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
     </Modal>
   );
 }
@@ -160,7 +294,6 @@ export function AddFoodModal({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
   },
   header: {
     flexDirection: 'row',
@@ -168,17 +301,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-    backgroundColor: '#fff',
   },
   cancelButton: {
     fontSize: 16,
-    color: '#3b82f6',
   },
   title: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#111827',
   },
   tabContainer: {
     flexDirection: 'row',
@@ -188,47 +317,60 @@ const styles = StyleSheet.create({
   tab: {
     flex: 1,
     paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: '#e5e7eb',
     alignItems: 'center',
-  },
-  activeTab: {
-    backgroundColor: '#3b82f6',
   },
   tabText: {
     fontSize: 15,
     fontWeight: '500',
-    color: '#6b7280',
-  },
-  activeTabText: {
-    color: '#fff',
   },
   inputContainer: {
     flex: 1,
     padding: 16,
   },
+  inputWrapper: {
+    position: 'relative',
+  },
   textInput: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
     padding: 16,
+    paddingRight: 56,
     fontSize: 16,
     minHeight: 100,
     textAlignVertical: 'top',
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+  },
+  micButton: {
+    position: 'absolute',
+    right: 10,
+    top: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+  },
+  listeningOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(254, 242, 242, 0.95)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  listeningText: {
+    marginTop: 8,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#DC2626',
   },
   submitButton: {
-    backgroundColor: '#3b82f6',
-    borderRadius: 12,
     padding: 16,
     alignItems: 'center',
     marginTop: 16,
   },
-  submitButtonDisabled: {
-    backgroundColor: '#9ca3af',
-  },
   submitButtonText: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -237,18 +379,13 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   searchInput: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
     padding: 12,
     fontSize: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
   },
   foodItem: {
-    backgroundColor: '#fff',
     padding: 16,
-    borderRadius: 12,
     marginBottom: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -257,20 +394,16 @@ const styles = StyleSheet.create({
   foodName: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#111827',
   },
   foodServing: {
     fontSize: 14,
-    color: '#6b7280',
     marginTop: 2,
   },
   timesUsed: {
     fontSize: 12,
-    color: '#9ca3af',
   },
   emptyText: {
     textAlign: 'center',
-    color: '#9ca3af',
     marginTop: 32,
   },
 });

@@ -4,12 +4,14 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { OnboardingProgress } from './OnboardingProgress';
+import { useTheme } from '../context/ThemeContext';
 
 interface OnboardingLayoutProps {
   children: React.ReactNode;
@@ -26,7 +28,7 @@ interface OnboardingLayoutProps {
 export function OnboardingLayout({
   children,
   currentStep,
-  totalSteps = 12,
+  totalSteps = 22,
   onContinue,
   onBack,
   continueLabel = 'Continue',
@@ -34,15 +36,17 @@ export function OnboardingLayout({
   showProgress = true,
   showBack = true,
 }: OnboardingLayoutProps) {
+  const { colors, radius } = useTheme();
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.white }]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
         {showBack && currentStep > 1 && (
           <TouchableOpacity style={styles.backButton} onPress={onBack}>
-            <Text style={styles.backButtonText}>←</Text>
+            <Ionicons name="chevron-back" size={28} color={colors.textSecondary} />
           </TouchableOpacity>
         )}
 
@@ -61,11 +65,17 @@ export function OnboardingLayout({
           )}
 
           <TouchableOpacity
-            style={[styles.continueButton, continueDisabled && styles.continueButtonDisabled]}
+            style={[
+              styles.continueButton,
+              {
+                backgroundColor: continueDisabled ? colors.textMuted : colors.primary,
+                borderRadius: radius.md,
+              },
+            ]}
             onPress={onContinue}
             disabled={continueDisabled}
           >
-            <Text style={styles.continueButtonText}>{continueLabel}</Text>
+            <Text style={[styles.continueButtonText, { color: colors.white }]}>{continueLabel}</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -76,7 +86,6 @@ export function OnboardingLayout({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
   },
   keyboardView: {
     flex: 1,
@@ -87,10 +96,6 @@ const styles = StyleSheet.create({
     left: 16,
     zIndex: 10,
     padding: 8,
-  },
-  backButtonText: {
-    fontSize: 24,
-    color: '#6B7280',
   },
   scrollView: {
     flex: 1,
@@ -106,17 +111,11 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   continueButton: {
-    backgroundColor: '#3B82F6',
-    borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
     marginTop: 8,
   },
-  continueButtonDisabled: {
-    backgroundColor: '#9CA3AF',
-  },
   continueButtonText: {
-    color: '#FFFFFF',
     fontSize: 17,
     fontWeight: '600',
   },

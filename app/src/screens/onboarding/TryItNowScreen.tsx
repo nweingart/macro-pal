@@ -1,11 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TextInput,
   ActivityIndicator,
+  TouchableOpacity,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import {
+  ExpoSpeechRecognitionModule,
+  useSpeechRecognitionEvent,
+} from 'expo-speech-recognition';
 import { OnboardingLayout } from '../../components/OnboardingLayout';
 
 interface Props {
@@ -23,6 +29,77 @@ const SUGGESTIONS = [
 export function TryItNowScreen({ onContinue, onBack }: Props) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+
+  // Check permission on mount
+  useEffect(() => {
+    const checkPermission = async () => {
+      const result = await ExpoSpeechRecognitionModule.getPermissionsAsync();
+      setHasPermission(result.granted);
+    };
+    checkPermission();
+  }, []);
+
+  // Speech recognition events
+  useSpeechRecognitionEvent('start', () => {
+    setIsListening(true);
+  });
+
+  useSpeechRecognitionEvent('end', () => {
+    setIsListening(false);
+  });
+
+  useSpeechRecognitionEvent('result', (event) => {
+    if (event.results && event.results.length > 0) {
+      const transcript = event.results[0]?.transcript;
+      if (transcript) {
+        setInput(transcript);
+      }
+    }
+  });
+
+  useSpeechRecognitionEvent('error', (event) => {
+    console.error('Speech recognition error:', event.error);
+    setIsListening(false);
+  });
+
+  const startListening = async () => {
+    // Request permission if not granted
+    if (hasPermission !== true) {
+      const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+      setHasPermission(result.granted);
+      if (!result.granted) {
+        return;
+      }
+    }
+
+    try {
+      await ExpoSpeechRecognitionModule.start({
+        lang: 'en-US',
+        interimResults: true,
+        maxAlternatives: 1,
+      });
+    } catch (err) {
+      console.error('Failed to start speech recognition:', err);
+    }
+  };
+
+  const stopListening = async () => {
+    try {
+      await ExpoSpeechRecognitionModule.stop();
+    } catch (err) {
+      console.error('Failed to stop speech recognition:', err);
+    }
+  };
+
+  const toggleListening = () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening();
+    }
+  };
 
   const handleContinue = async () => {
     if (input.trim()) {
@@ -38,7 +115,7 @@ export function TryItNowScreen({ onContinue, onBack }: Props) {
 
   return (
     <OnboardingLayout
-      currentStep={11}
+      currentStep={17}
       onContinue={handleContinue}
       onBack={onBack}
       continueLabel={loading ? 'Analyzing...' : 'Log It'}
@@ -59,8 +136,30 @@ export function TryItNowScreen({ onContinue, onBack }: Props) {
             placeholder="e.g., 2 eggs with toast and butter"
             placeholderTextColor="#9CA3AF"
             multiline
-            autoFocus
+            autoFocus={!isListening}
           />
+          <TouchableOpacity
+            style={[
+              styles.micButton,
+              isListening && styles.micButtonActive,
+            ]}
+            onPress={toggleListening}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name={isListening ? 'mic' : 'mic-outline'}
+              size={24}
+              color={isListening ? '#FFFFFF' : '#3B82F6'}
+            />
+          </TouchableOpacity>
+          {isListening && (
+            <View style={styles.listeningOverlay}>
+              <View style={styles.listeningIndicator}>
+                <Ionicons name="mic" size={32} color="#DC2626" />
+                <Text style={styles.listeningText}>Listening...</Text>
+              </View>
+            </View>
+          )}
           {loading && (
             <View style={styles.loadingOverlay}>
               <ActivityIndicator color="#3B82F6" size="large" />
@@ -81,16 +180,6 @@ export function TryItNowScreen({ onContinue, onBack }: Props) {
                 "{suggestion}"
               </Text>
             ))}
-          </View>
-        </View>
-
-        <View style={styles.tipBox}>
-          <Text style={styles.tipEmoji}>💡</Text>
-          <View style={styles.tipContent}>
-            <Text style={styles.tipTitle}>Pro tip</Text>
-            <Text style={styles.tipText}>
-              Include quantities for more accurate tracking. "2 eggs" is better than just "eggs".
-            </Text>
           </View>
         </View>
       </View>
@@ -119,23 +208,61 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     color: '#6B7280',
-    marginBottom: 24,
+    marginBottom: 16,
     lineHeight: 24,
   },
   inputContainer: {
-    marginBottom: 24,
+    marginBottom: 16,
     position: 'relative',
   },
   input: {
     backgroundColor: '#F9FAFB',
     borderRadius: 16,
-    padding: 20,
-    fontSize: 18,
+    padding: 14,
+    paddingRight: 56,
+    fontSize: 17,
     color: '#111827',
-    minHeight: 120,
+    minHeight: 80,
     textAlignVertical: 'top',
     borderWidth: 2,
     borderColor: '#E5E7EB',
+  },
+  micButton: {
+    position: 'absolute',
+    right: 12,
+    top: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#3B82F6',
+  },
+  micButtonActive: {
+    backgroundColor: '#DC2626',
+    borderColor: '#DC2626',
+  },
+  listeningOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(254, 242, 242, 0.95)',
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  listeningIndicator: {
+    alignItems: 'center',
+  },
+  listeningText: {
+    marginTop: 8,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#DC2626',
   },
   loadingOverlay: {
     position: 'absolute',
@@ -154,7 +281,7 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   suggestionsContainer: {
-    marginBottom: 24,
+    marginBottom: 12,
   },
   suggestionsTitle: {
     fontSize: 13,
@@ -174,29 +301,5 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     fontSize: 14,
     color: '#3B82F6',
-  },
-  tipBox: {
-    flexDirection: 'row',
-    backgroundColor: '#FEF3C7',
-    borderRadius: 12,
-    padding: 16,
-  },
-  tipEmoji: {
-    fontSize: 24,
-    marginRight: 12,
-  },
-  tipContent: {
-    flex: 1,
-  },
-  tipTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#92400E',
-    marginBottom: 2,
-  },
-  tipText: {
-    fontSize: 14,
-    color: '#A16207',
-    lineHeight: 20,
   },
 });

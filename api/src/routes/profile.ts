@@ -12,7 +12,7 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 const updateProfileSchema = z.object({
   gender: z.enum(['male', 'female', 'other']).nullable().optional(),
-  age: z.number().positive().nullable().optional(),
+  birthday: z.string().nullable().optional(), // ISO date string YYYY-MM-DD
   height_inches: z.number().positive().nullable().optional(),
   weight_lbs: z.number().positive().nullable().optional(),
   activity_level: z.enum(['sedentary', 'light', 'moderate', 'active', 'very_active']).nullable().optional(),
@@ -22,6 +22,19 @@ const updateProfileSchema = z.object({
   carbs_target_g: z.number().nonnegative().nullable().optional(),
   fat_target_g: z.number().nonnegative().nullable().optional(),
 });
+
+// Calculate age from birthday
+function calculateAgeFromBirthday(birthday: string | null): number | null {
+  if (!birthday) return null;
+  const birthDate = new Date(birthday);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+}
 
 // GET /api/profile - Get user profile
 const getProfile: RequestHandler = async (req, res) => {
@@ -37,6 +50,11 @@ const getProfile: RequestHandler = async (req, res) => {
 
     if (error && error.code !== 'PGRST116') {
       throw error;
+    }
+
+    // Calculate age from birthday if available
+    if (profile && profile.birthday) {
+      profile.age = calculateAgeFromBirthday(profile.birthday);
     }
 
     res.json(profile);
@@ -60,6 +78,9 @@ const updateProfile: RequestHandler = async (req, res) => {
       .eq('user_id', userId)
       .single();
 
+    // Calculate age from birthday if provided
+    const age = updates.birthday ? calculateAgeFromBirthday(updates.birthday) : null;
+
     // Calculate TDEE and macro targets if we have all the data
     let calculatedTargets: {
       calorie_target?: number;
@@ -70,7 +91,7 @@ const updateProfile: RequestHandler = async (req, res) => {
 
     if (
       updates.gender &&
-      updates.age &&
+      age &&
       updates.height_inches &&
       updates.weight_lbs &&
       updates.activity_level &&
@@ -80,7 +101,7 @@ const updateProfile: RequestHandler = async (req, res) => {
     ) {
       const tdee = calculateTDEE({
         gender: updates.gender as 'male' | 'female' | 'other',
-        age: updates.age,
+        age,
         height_inches: updates.height_inches,
         weight_lbs: updates.weight_lbs,
         activity_level: updates.activity_level as 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active',
@@ -207,8 +228,32 @@ const getTrackingSummary: RequestHandler = async (req, res) => {
   }
 };
 
+// DELETE /api/profile/account - Delete user account and all data (atomic)
+const deleteAccount: RequestHandler = async (req, res) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.userId;
+
+    // Single transactional RPC — all-or-nothing deletion
+    const { error } = await supabase.rpc('delete_user_account', {
+      target_user_id: userId,
+    });
+
+    if (error) {
+      console.error('Error deleting account via RPC:', error);
+      throw new Error('Failed to delete account');
+    }
+
+    res.json({ success: true, message: 'Account deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting account:', err);
+    res.status(500).json({ error: 'Failed to delete account' });
+  }
+};
+
 router.get('/', getProfile);
 router.put('/', updateProfile);
 router.get('/tracking/summary', getTrackingSummary);
+router.delete('/account', deleteAccount);
 
 export default router;

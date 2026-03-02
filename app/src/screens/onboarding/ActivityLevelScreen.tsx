@@ -52,7 +52,7 @@ export function ActivityLevelScreen({ onContinue, onBack, initialValue }: Props)
 
   return (
     <OnboardingLayout
-      currentStep={8}
+      currentStep={12}
       onContinue={handleContinue}
       onBack={onBack}
       continueDisabled={!selected}
@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     color: '#6B7280',
-    marginBottom: 24,
+    marginBottom: 12,
   },
   options: {
     gap: 10,

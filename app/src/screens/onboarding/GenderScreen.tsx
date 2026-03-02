@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { OnboardingLayout } from '../../components/OnboardingLayout';
 
 interface Props {
@@ -9,9 +10,9 @@ interface Props {
 }
 
 const GENDERS = [
-  { id: 'male', emoji: '👨', label: 'Male' },
-  { id: 'female', emoji: '👩', label: 'Female' },
-  { id: 'other', emoji: '🧑', label: 'Other' },
+  { id: 'male', icon: 'male' as const, label: 'Male' },
+  { id: 'female', icon: 'female' as const, label: 'Female' },
+  { id: 'other', icon: 'person' as const, label: 'Other' },
 ];
 
 export function GenderScreen({ onContinue, onBack, initialValue }: Props) {
@@ -25,7 +26,7 @@ export function GenderScreen({ onContinue, onBack, initialValue }: Props) {
 
   return (
     <OnboardingLayout
-      currentStep={6}
+      currentStep={9}
       onContinue={handleContinue}
       onBack={onBack}
       continueDisabled={!selected}
@@ -47,7 +48,7 @@ export function GenderScreen({ onContinue, onBack, initialValue }: Props) {
               ]}
               onPress={() => setSelected(gender.id)}
             >
-              <Text style={styles.optionEmoji}>{gender.emoji}</Text>
+              <Ionicons name={gender.icon} size={40} color={selected === gender.id ? '#1D4ED8' : '#6B7280'} style={styles.optionIcon} />
               <Text
                 style={[
                   styles.optionLabel,
@@ -60,9 +61,10 @@ export function GenderScreen({ onContinue, onBack, initialValue }: Props) {
           ))}
         </View>
 
-        <Text style={styles.privacyNote}>
-          🔒 Your data is private and never shared
-        </Text>
+        <View style={styles.privacyNote}>
+          <Ionicons name="lock-closed" size={16} color="#9CA3AF" />
+          <Text style={styles.privacyNoteText}>Your data is private and never shared</Text>
+        </View>
       </View>
     </OnboardingLayout>
   );
@@ -110,8 +112,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#EFF6FF',
     borderColor: '#3B82F6',
   },
-  optionEmoji: {
-    fontSize: 40,
+  optionIcon: {
     marginBottom: 8,
   },
   optionLabel: {
@@ -123,8 +124,13 @@ const styles = StyleSheet.create({
     color: '#1D4ED8',
   },
   privacyNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  privacyNoteText: {
     fontSize: 14,
     color: '#9CA3AF',
-    textAlign: 'center',
   },
 });

@@ -11,8 +11,10 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useFoodLibrary } from '../hooks/useFoodLibrary';
+import { useTheme } from '../context/ThemeContext';
 import { Food } from '../types';
 
 interface EditModalProps {
@@ -23,6 +25,7 @@ interface EditModalProps {
 }
 
 function EditFoodModal({ food, visible, onClose, onSave }: EditModalProps) {
+  const { colors, radius } = useTheme();
   const [name, setName] = useState('');
   const [servingUnit, setServingUnit] = useState('');
   const [calories, setCalories] = useState('');
@@ -60,36 +63,37 @@ function EditFoodModal({ food, visible, onClose, onSave }: EditModalProps) {
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <View style={modalStyles.container}>
-        <View style={modalStyles.header}>
+      <View style={[modalStyles.container, { backgroundColor: colors.background }]}>
+        <View style={[modalStyles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
           <TouchableOpacity onPress={onClose}>
-            <Text style={modalStyles.cancelButton}>Cancel</Text>
+            <Text style={[modalStyles.cancelButton, { color: colors.textSecondary }]}>Cancel</Text>
           </TouchableOpacity>
-          <Text style={modalStyles.title}>Edit Food</Text>
+          <Text style={[modalStyles.title, { color: colors.text }]}>Edit Food</Text>
           <TouchableOpacity onPress={handleSave}>
-            <Text style={modalStyles.saveButton}>Save</Text>
+            <Text style={[modalStyles.saveButton, { color: colors.primary }]}>Save</Text>
           </TouchableOpacity>
         </View>
 
         <View style={modalStyles.form}>
-          <Text style={modalStyles.label}>Name</Text>
+          <Text style={[modalStyles.label, { color: colors.text }]}>Name</Text>
           <TextInput
-            style={modalStyles.input}
+            style={[modalStyles.input, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.sm, color: colors.text }]}
             value={name}
             onChangeText={setName}
           />
 
-          <Text style={modalStyles.label}>Serving Unit</Text>
+          <Text style={[modalStyles.label, { color: colors.text }]}>Serving Unit</Text>
           <TextInput
-            style={modalStyles.input}
+            style={[modalStyles.input, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.sm, color: colors.text }]}
             value={servingUnit}
             onChangeText={setServingUnit}
             placeholder="e.g., 1 large egg, 1 cup"
+            placeholderTextColor={colors.textMuted}
           />
 
-          <Text style={modalStyles.label}>Calories per Serving</Text>
+          <Text style={[modalStyles.label, { color: colors.text }]}>Calories per Serving</Text>
           <TextInput
-            style={modalStyles.input}
+            style={[modalStyles.input, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.sm, color: colors.text }]}
             value={calories}
             onChangeText={setCalories}
             keyboardType="numeric"
@@ -97,27 +101,27 @@ function EditFoodModal({ food, visible, onClose, onSave }: EditModalProps) {
 
           <View style={modalStyles.macroRow}>
             <View style={modalStyles.macroField}>
-              <Text style={modalStyles.label}>Protein (g)</Text>
+              <Text style={[modalStyles.label, { color: colors.text }]}>Protein (g)</Text>
               <TextInput
-                style={modalStyles.input}
+                style={[modalStyles.input, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.sm, color: colors.text }]}
                 value={protein}
                 onChangeText={setProtein}
                 keyboardType="numeric"
               />
             </View>
             <View style={modalStyles.macroField}>
-              <Text style={modalStyles.label}>Carbs (g)</Text>
+              <Text style={[modalStyles.label, { color: colors.text }]}>Carbs (g)</Text>
               <TextInput
-                style={modalStyles.input}
+                style={[modalStyles.input, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.sm, color: colors.text }]}
                 value={carbs}
                 onChangeText={setCarbs}
                 keyboardType="numeric"
               />
             </View>
             <View style={modalStyles.macroField}>
-              <Text style={modalStyles.label}>Fat (g)</Text>
+              <Text style={[modalStyles.label, { color: colors.text }]}>Fat (g)</Text>
               <TextInput
-                style={modalStyles.input}
+                style={[modalStyles.input, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.sm, color: colors.text }]}
                 value={fat}
                 onChangeText={setFat}
                 keyboardType="numeric"
@@ -133,7 +137,6 @@ function EditFoodModal({ food, visible, onClose, onSave }: EditModalProps) {
 const modalStyles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
   },
   header: {
     flexDirection: 'row',
@@ -141,21 +144,16 @@ const modalStyles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-    backgroundColor: '#fff',
   },
   cancelButton: {
     fontSize: 16,
-    color: '#6b7280',
   },
   title: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#111827',
   },
   saveButton: {
     fontSize: 16,
-    color: '#3b82f6',
     fontWeight: '600',
   },
   form: {
@@ -164,17 +162,13 @@ const modalStyles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#374151',
     marginBottom: 6,
     marginTop: 12,
   },
   input: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
     padding: 12,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
   },
   macroRow: {
     flexDirection: 'row',
@@ -186,6 +180,7 @@ const modalStyles = StyleSheet.create({
 });
 
 export function LibraryScreen() {
+  const { colors, radius, shadows } = useTheme();
   const { foods, loading, refresh, updateFood, deleteFood } = useFoodLibrary();
   const [searchQuery, setSearchQuery] = useState('');
   const [editingFood, setEditingFood] = useState<Food | null>(null);
@@ -230,12 +225,20 @@ export function LibraryScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.searchContainer}>
         <TextInput
-          style={styles.searchInput}
+          style={[
+            styles.searchInput,
+            {
+              backgroundColor: colors.card,
+              borderRadius: radius.md,
+              borderColor: colors.border,
+              color: colors.text,
+            },
+          ]}
           placeholder="Search foods..."
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor={colors.textMuted}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
@@ -246,33 +249,34 @@ export function LibraryScreen() {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <TouchableOpacity
-            style={styles.foodCard}
+            style={[styles.foodCard, { backgroundColor: colors.card, borderRadius: radius.md }, shadows.small]}
             onPress={() => handleEdit(item)}
             onLongPress={() => handleDelete(item)}
           >
             <View style={styles.foodHeader}>
-              <Text style={styles.foodName}>{item.name}</Text>
-              <Text style={styles.timesUsed}>Used {item.times_used}x</Text>
+              <Text style={[styles.foodName, { color: colors.text }]}>{item.name}</Text>
+              <Text style={[styles.timesUsed, { color: colors.textMuted }]}>Used {item.times_used}x</Text>
             </View>
-            <Text style={styles.servingUnit}>{item.serving_unit}</Text>
+            <Text style={[styles.servingUnit, { color: colors.textSecondary }]}>{item.serving_unit}</Text>
             <View style={styles.macros}>
-              <Text style={styles.macro}>{item.calories_per_serving} kcal</Text>
-              <Text style={styles.macroDivider}>·</Text>
-              <Text style={styles.macro}>P: {item.protein_per_serving}g</Text>
-              <Text style={styles.macroDivider}>·</Text>
-              <Text style={styles.macro}>C: {item.carbs_per_serving}g</Text>
-              <Text style={styles.macroDivider}>·</Text>
-              <Text style={styles.macro}>F: {item.fat_per_serving}g</Text>
+              <Text style={[styles.macro, { color: colors.textSecondary }]}>{item.calories_per_serving} kcal</Text>
+              <Text style={[styles.macroDivider, { color: colors.textLight }]}>·</Text>
+              <Text style={[styles.macro, { color: colors.textSecondary }]}>P: {item.protein_per_serving}g</Text>
+              <Text style={[styles.macroDivider, { color: colors.textLight }]}>·</Text>
+              <Text style={[styles.macro, { color: colors.textSecondary }]}>C: {item.carbs_per_serving}g</Text>
+              <Text style={[styles.macroDivider, { color: colors.textLight }]}>·</Text>
+              <Text style={[styles.macro, { color: colors.textSecondary }]}>F: {item.fat_per_serving}g</Text>
             </View>
           </TouchableOpacity>
         )}
         ListEmptyComponent={
           loading ? (
-            <ActivityIndicator style={styles.loader} />
+            <ActivityIndicator style={styles.loader} color={colors.primary} />
           ) : (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>Your food library is empty</Text>
-              <Text style={styles.emptySubtext}>
+              <Ionicons name="library-outline" size={48} color={colors.textMuted} />
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Your food library is empty</Text>
+              <Text style={[styles.emptySubtext, { color: colors.textMuted }]}>
                 Foods you log will appear here
               </Text>
             </View>
@@ -280,7 +284,7 @@ export function LibraryScreen() {
         }
         contentContainerStyle={styles.listContent}
         refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={refresh} />
+          <RefreshControl refreshing={loading} onRefresh={refresh} tintColor={colors.primary} />
         }
       />
 
@@ -297,34 +301,23 @@ export function LibraryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
   },
   searchContainer: {
     padding: 16,
     paddingBottom: 8,
   },
   searchInput: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
     padding: 12,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
   },
   listContent: {
     padding: 16,
     paddingTop: 8,
   },
   foodCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
   foodHeader: {
     flexDirection: 'row',
@@ -334,16 +327,13 @@ const styles = StyleSheet.create({
   foodName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
     flex: 1,
   },
   timesUsed: {
     fontSize: 12,
-    color: '#9ca3af',
   },
   servingUnit: {
     fontSize: 14,
-    color: '#6b7280',
     marginTop: 4,
   },
   macros: {
@@ -353,11 +343,9 @@ const styles = StyleSheet.create({
   },
   macro: {
     fontSize: 13,
-    color: '#6b7280',
   },
   macroDivider: {
     marginHorizontal: 6,
-    color: '#d1d5db',
   },
   loader: {
     marginTop: 40,
@@ -365,15 +353,14 @@ const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: 'center',
     marginTop: 40,
+    gap: 8,
   },
   emptyText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#6b7280',
+    marginTop: 8,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#9ca3af',
-    marginTop: 4,
   },
 });

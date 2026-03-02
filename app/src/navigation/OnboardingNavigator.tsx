@@ -1,33 +1,78 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ActivityIndicator, View } from 'react-native';
 
+import { useAuth } from '../hooks/useAuth';
 import {
   WelcomeScreen,
   ProblemScreen,
   SolutionScreen,
-  HowItWorksScreen,
+  YouTypeScreen,
+  WeCalculateScreen,
   GoalScreen,
+  BiggestChallengeScreen,
+  TimelineScreen,
   GenderScreen,
+  BirthdayScreen,
   BodyStatsScreen,
   ActivityLevelScreen,
+  MealFrequencyScreen,
+  TypicalMealsScreen,
   TargetsScreen,
   ScienceScreen,
   TryItNowScreen,
   ReadyScreen,
+  CongratulationsScreen,
+  StreakCommitScreen,
+  WhatToExpectScreen,
+  PaywallScreen,
 } from '../screens/onboarding';
 import { api } from '../services/api';
 
 const Stack = createNativeStackNavigator();
 
+// Total steps in onboarding flow
+const TOTAL_STEPS = 22;
+
+// Screen order for determining which screen to restore
+const SCREEN_ORDER = [
+  'Welcome',
+  'Problem',
+  'Solution',
+  'YouType',
+  'WeCalculate',
+  'Goal',
+  'BiggestChallenge',
+  'Timeline',
+  'Gender',
+  'Birthday',
+  'BodyStats',
+  'ActivityLevel',
+  'MealFrequency',
+  'TypicalMeals',
+  'Science',
+  'Targets',
+  'TryItNow',
+  'Ready',
+  'Congratulations',
+  'StreakCommit',
+  'WhatToExpect',
+  'Paywall',
+];
+
 interface OnboardingData {
   goal: string;
+  biggestChallenge: string;
+  timeline: string;
   gender: string;
-  age: number;
+  birthday: string; // ISO date string YYYY-MM-DD
   heightFeet: number;
   heightInches: number;
   weight: number;
   activityLevel: string;
+  mealFrequency: string;
+  eatingStyle: string;
   targets: {
     calories: number;
     protein: number;
@@ -38,6 +83,23 @@ interface OnboardingData {
     name: string;
     calories: number;
   };
+}
+
+interface SavedProgress {
+  currentScreen: string;
+  data: Partial<OnboardingData>;
+}
+
+// Calculate age from birthday
+function calculateAge(birthday: string): number {
+  const birthDate = new Date(birthday);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
 }
 
 // TDEE calculation (matches backend)
@@ -106,19 +168,98 @@ interface OnboardingNavigatorProps {
 }
 
 export function OnboardingNavigator({ onComplete }: OnboardingNavigatorProps) {
+  const { user } = useAuth();
   const [data, setData] = useState<Partial<OnboardingData>>({});
+  const [initialScreen, setInitialScreen] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const currentScreenRef = useRef<string>('Welcome');
 
-  const updateData = (updates: Partial<OnboardingData>) => {
-    setData((prev) => ({ ...prev, ...updates }));
+  const getStorageKey = () => user ? `onboarding_progress_${user.id}` : null;
+
+  // Load saved progress on mount
+  useEffect(() => {
+    const loadProgress = async () => {
+      const key = getStorageKey();
+      if (!key) {
+        setInitialScreen('Welcome');
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const saved = await AsyncStorage.getItem(key);
+        if (saved) {
+          const progress: SavedProgress = JSON.parse(saved);
+          // Handle migration from old screen name
+          let screen = progress.currentScreen;
+          if (screen === 'HowItWorks') {
+            screen = 'YouType';
+          }
+          setData(progress.data);
+          setInitialScreen(screen);
+          currentScreenRef.current = screen;
+        } else {
+          setInitialScreen('Welcome');
+        }
+      } catch (err) {
+        console.error('Error loading onboarding progress:', err);
+        setInitialScreen('Welcome');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadProgress();
+  }, [user]);
+
+  // Save progress whenever data or screen changes
+  const saveProgress = async (screen: string, newData: Partial<OnboardingData>) => {
+    const key = getStorageKey();
+    if (!key) return;
+
+    try {
+      const progress: SavedProgress = {
+        currentScreen: screen,
+        data: newData,
+      };
+      await AsyncStorage.setItem(key, JSON.stringify(progress));
+    } catch (err) {
+      console.error('Error saving onboarding progress:', err);
+    }
   };
 
-  const saveProfileAndComplete = async () => {
+  const navigateAndSave = (
+    navigation: any,
+    nextScreen: string,
+    dataUpdates?: Partial<OnboardingData>
+  ) => {
+    const newData = dataUpdates ? { ...data, ...dataUpdates } : data;
+    if (dataUpdates) {
+      setData(newData);
+    }
+    currentScreenRef.current = nextScreen;
+    saveProgress(nextScreen, newData);
+    navigation.navigate(nextScreen);
+  };
+
+  const clearProgress = async () => {
+    const key = getStorageKey();
+    if (key) {
+      try {
+        await AsyncStorage.removeItem(key);
+      } catch (err) {
+        console.error('Error clearing onboarding progress:', err);
+      }
+    }
+  };
+
+  const saveProfile = async () => {
     try {
       const heightInches = (data.heightFeet || 0) * 12 + (data.heightInches || 0);
 
       await api.updateProfile({
         gender: data.gender as 'male' | 'female' | 'other',
-        age: data.age,
+        birthday: data.birthday,
         height_inches: heightInches,
         weight_lbs: data.weight,
         activity_level: data.activityLevel as any,
@@ -128,17 +269,29 @@ export function OnboardingNavigator({ onComplete }: OnboardingNavigatorProps) {
         carbs_target_g: data.targets?.carbs,
         fat_target_g: data.targets?.fat,
       });
-
-      await AsyncStorage.setItem('onboarding_complete', 'true');
-      onComplete();
     } catch (err) {
       console.error('Error saving profile:', err);
-      onComplete();
+    }
+
+    // Clear progress and mark onboarding complete in AsyncStorage
+    // (but do NOT call onComplete — that happens after subscription)
+    await clearProgress();
+    if (user) {
+      await AsyncStorage.setItem(`onboarding_complete_${user.id}`, 'true');
     }
   };
 
+  if (isLoading || !initialScreen) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF' }}>
+        <ActivityIndicator size="large" color="#3B82F6" />
+      </View>
+    );
+  }
+
   return (
     <Stack.Navigator
+      initialRouteName={initialScreen}
       screenOptions={{
         headerShown: false,
         animation: 'slide_from_right',
@@ -147,7 +300,7 @@ export function OnboardingNavigator({ onComplete }: OnboardingNavigatorProps) {
       <Stack.Screen name="Welcome">
         {({ navigation }) => (
           <WelcomeScreen
-            onContinue={() => navigation.navigate('Problem')}
+            onContinue={() => navigateAndSave(navigation, 'Problem')}
           />
         )}
       </Stack.Screen>
@@ -155,7 +308,7 @@ export function OnboardingNavigator({ onComplete }: OnboardingNavigatorProps) {
       <Stack.Screen name="Problem">
         {({ navigation }) => (
           <ProblemScreen
-            onContinue={() => navigation.navigate('Solution')}
+            onContinue={() => navigateAndSave(navigation, 'Solution')}
             onBack={() => navigation.goBack()}
           />
         )}
@@ -164,16 +317,25 @@ export function OnboardingNavigator({ onComplete }: OnboardingNavigatorProps) {
       <Stack.Screen name="Solution">
         {({ navigation }) => (
           <SolutionScreen
-            onContinue={() => navigation.navigate('HowItWorks')}
+            onContinue={() => navigateAndSave(navigation, 'YouType')}
             onBack={() => navigation.goBack()}
           />
         )}
       </Stack.Screen>
 
-      <Stack.Screen name="HowItWorks">
+      <Stack.Screen name="YouType">
         {({ navigation }) => (
-          <HowItWorksScreen
-            onContinue={() => navigation.navigate('Goal')}
+          <YouTypeScreen
+            onContinue={() => navigateAndSave(navigation, 'WeCalculate')}
+            onBack={() => navigation.goBack()}
+          />
+        )}
+      </Stack.Screen>
+
+      <Stack.Screen name="WeCalculate">
+        {({ navigation }) => (
+          <WeCalculateScreen
+            onContinue={() => navigateAndSave(navigation, 'Goal')}
             onBack={() => navigation.goBack()}
           />
         )}
@@ -183,10 +345,27 @@ export function OnboardingNavigator({ onComplete }: OnboardingNavigatorProps) {
         {({ navigation }) => (
           <GoalScreen
             initialValue={data.goal}
-            onContinue={(goal) => {
-              updateData({ goal });
-              navigation.navigate('Gender');
-            }}
+            onContinue={(goal) => navigateAndSave(navigation, 'BiggestChallenge', { goal })}
+            onBack={() => navigation.goBack()}
+          />
+        )}
+      </Stack.Screen>
+
+      <Stack.Screen name="BiggestChallenge">
+        {({ navigation }) => (
+          <BiggestChallengeScreen
+            initialValue={data.biggestChallenge}
+            onContinue={(biggestChallenge) => navigateAndSave(navigation, 'Timeline', { biggestChallenge })}
+            onBack={() => navigation.goBack()}
+          />
+        )}
+      </Stack.Screen>
+
+      <Stack.Screen name="Timeline">
+        {({ navigation }) => (
+          <TimelineScreen
+            initialValue={data.timeline}
+            onContinue={(timeline) => navigateAndSave(navigation, 'Gender', { timeline })}
             onBack={() => navigation.goBack()}
           />
         )}
@@ -196,10 +375,17 @@ export function OnboardingNavigator({ onComplete }: OnboardingNavigatorProps) {
         {({ navigation }) => (
           <GenderScreen
             initialValue={data.gender}
-            onContinue={(gender) => {
-              updateData({ gender });
-              navigation.navigate('BodyStats');
-            }}
+            onContinue={(gender) => navigateAndSave(navigation, 'Birthday', { gender })}
+            onBack={() => navigation.goBack()}
+          />
+        )}
+      </Stack.Screen>
+
+      <Stack.Screen name="Birthday">
+        {({ navigation }) => (
+          <BirthdayScreen
+            initialValue={data.birthday}
+            onContinue={(birthday) => navigateAndSave(navigation, 'BodyStats', { birthday })}
             onBack={() => navigation.goBack()}
           />
         )}
@@ -209,15 +395,11 @@ export function OnboardingNavigator({ onComplete }: OnboardingNavigatorProps) {
         {({ navigation }) => (
           <BodyStatsScreen
             initialValues={{
-              age: data.age?.toString(),
               heightFeet: data.heightFeet?.toString(),
               heightInches: data.heightInches?.toString(),
               weight: data.weight?.toString(),
             }}
-            onContinue={(stats) => {
-              updateData(stats);
-              navigation.navigate('ActivityLevel');
-            }}
+            onContinue={(stats) => navigateAndSave(navigation, 'ActivityLevel', stats)}
             onBack={() => navigation.goBack()}
           />
         )}
@@ -229,18 +411,47 @@ export function OnboardingNavigator({ onComplete }: OnboardingNavigatorProps) {
             initialValue={data.activityLevel}
             onContinue={(activityLevel) => {
               const heightInches = (data.heightFeet || 0) * 12 + (data.heightInches || 0);
+              const age = data.birthday ? calculateAge(data.birthday) : 30;
               const tdee = calculateTDEE({
                 gender: data.gender || 'other',
-                age: data.age || 30,
+                age,
                 heightInches,
                 weightLbs: data.weight || 150,
                 activityLevel,
               });
               const targets = calculateTargets(tdee, data.goal || 'maintain', data.weight || 150);
 
-              updateData({ activityLevel, targets });
-              navigation.navigate('Targets');
+              navigateAndSave(navigation, 'MealFrequency', { activityLevel, targets });
             }}
+            onBack={() => navigation.goBack()}
+          />
+        )}
+      </Stack.Screen>
+
+      <Stack.Screen name="MealFrequency">
+        {({ navigation }) => (
+          <MealFrequencyScreen
+            initialValue={data.mealFrequency}
+            onContinue={(mealFrequency) => navigateAndSave(navigation, 'TypicalMeals', { mealFrequency })}
+            onBack={() => navigation.goBack()}
+          />
+        )}
+      </Stack.Screen>
+
+      <Stack.Screen name="TypicalMeals">
+        {({ navigation }) => (
+          <TypicalMealsScreen
+            initialValue={data.eatingStyle}
+            onContinue={(eatingStyle) => navigateAndSave(navigation, 'Science', { eatingStyle })}
+            onBack={() => navigation.goBack()}
+          />
+        )}
+      </Stack.Screen>
+
+      <Stack.Screen name="Science">
+        {({ navigation }) => (
+          <ScienceScreen
+            onContinue={() => navigateAndSave(navigation, 'Targets')}
             onBack={() => navigation.goBack()}
           />
         )}
@@ -251,16 +462,13 @@ export function OnboardingNavigator({ onComplete }: OnboardingNavigatorProps) {
           <TargetsScreen
             targets={data.targets || { calories: 2000, protein: 150, carbs: 200, fat: 65 }}
             goal={data.goal || 'maintain'}
-            onContinue={() => navigation.navigate('Science')}
-            onBack={() => navigation.goBack()}
-          />
-        )}
-      </Stack.Screen>
-
-      <Stack.Screen name="Science">
-        {({ navigation }) => (
-          <ScienceScreen
-            onContinue={() => navigation.navigate('TryItNow')}
+            onContinue={(customTargets) => {
+              if (customTargets) {
+                navigateAndSave(navigation, 'TryItNow', { targets: customTargets });
+              } else {
+                navigateAndSave(navigation, 'TryItNow');
+              }
+            }}
             onBack={() => navigation.goBack()}
           />
         )}
@@ -270,20 +478,21 @@ export function OnboardingNavigator({ onComplete }: OnboardingNavigatorProps) {
         {({ navigation }) => (
           <TryItNowScreen
             onContinue={async (input) => {
+              let firstFood: OnboardingData['firstFood'] | undefined;
               try {
-                const entry = await api.createLogEntry(input);
+                const now = new Date();
+                const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                const entry = await api.createLogEntry(input, localDate);
                 if (entry && entry.food) {
-                  updateData({
-                    firstFood: {
-                      name: entry.food.name,
-                      calories: Math.round(entry.food.calories_per_serving * entry.servings),
-                    },
-                  });
+                  firstFood = {
+                    name: entry.food.name,
+                    calories: Math.round(entry.food.calories_per_serving * entry.servings),
+                  };
                 }
               } catch (err) {
                 console.error('Error logging first food:', err);
               }
-              navigation.navigate('Ready');
+              navigateAndSave(navigation, 'Ready', firstFood ? { firstFood } : undefined);
             }}
             onBack={() => navigation.goBack()}
           />
@@ -291,11 +500,50 @@ export function OnboardingNavigator({ onComplete }: OnboardingNavigatorProps) {
       </Stack.Screen>
 
       <Stack.Screen name="Ready">
-        {() => (
+        {({ navigation }) => (
           <ReadyScreen
             targets={data.targets || { calories: 2000, protein: 150, carbs: 200, fat: 65 }}
             firstFood={data.firstFood}
-            onContinue={saveProfileAndComplete}
+            onContinue={async () => {
+              await saveProfile();
+              navigation.navigate('Congratulations');
+            }}
+          />
+        )}
+      </Stack.Screen>
+
+      <Stack.Screen name="Congratulations">
+        {({ navigation }) => (
+          <CongratulationsScreen
+            firstFood={data.firstFood}
+            onContinue={() => navigation.navigate('StreakCommit')}
+          />
+        )}
+      </Stack.Screen>
+
+      <Stack.Screen name="StreakCommit">
+        {({ navigation }) => (
+          <StreakCommitScreen
+            onContinue={() => navigation.navigate('WhatToExpect')}
+            onBack={() => navigation.goBack()}
+          />
+        )}
+      </Stack.Screen>
+
+      <Stack.Screen name="WhatToExpect">
+        {({ navigation }) => (
+          <WhatToExpectScreen
+            onContinue={() => navigation.navigate('Paywall')}
+            onBack={() => navigation.goBack()}
+          />
+        )}
+      </Stack.Screen>
+
+      <Stack.Screen name="Paywall">
+        {({ navigation }) => (
+          <PaywallScreen
+            onSubscribed={onComplete}
+            onBack={() => navigation.goBack()}
           />
         )}
       </Stack.Screen>

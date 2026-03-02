@@ -1,28 +1,47 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
   withDelay,
   withTiming,
-  FadeInDown,
 } from 'react-native-reanimated';
 import { OnboardingLayout } from '../../components/OnboardingLayout';
 
+interface Targets {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+}
+
 interface Props {
-  onContinue: () => void;
+  onContinue: (targets?: Targets) => void;
   onBack: () => void;
-  targets: {
-    calories: number;
-    protein: number;
-    carbs: number;
-    fat: number;
-  };
+  targets: Targets;
   goal: string;
 }
 
 export function TargetsScreen({ onContinue, onBack, targets, goal }: Props) {
+  const [showCustomize, setShowCustomize] = useState(false);
+  const [customTargets, setCustomTargets] = useState(targets);
+  const [editCalories, setEditCalories] = useState(String(targets.calories));
+  const [editProtein, setEditProtein] = useState(String(targets.protein));
+  const [editCarbs, setEditCarbs] = useState(String(targets.carbs));
+  const [editFat, setEditFat] = useState(String(targets.fat));
+
   const calorieScale = useSharedValue(0);
   const macroOpacity = useSharedValue(0);
 
@@ -42,10 +61,45 @@ export function TargetsScreen({ onContinue, onBack, targets, goal }: Props) {
   const goalLabel =
     goal === 'lose' ? 'Weight Loss' : goal === 'gain' ? 'Weight Gain' : 'Maintenance';
 
+  const handleCustomize = () => {
+    setEditCalories(String(customTargets.calories));
+    setEditProtein(String(customTargets.protein));
+    setEditCarbs(String(customTargets.carbs));
+    setEditFat(String(customTargets.fat));
+    setShowCustomize(true);
+  };
+
+  const handleSaveCustom = () => {
+    const newTargets = {
+      calories: parseInt(editCalories) || customTargets.calories,
+      protein: parseInt(editProtein) || customTargets.protein,
+      carbs: parseInt(editCarbs) || customTargets.carbs,
+      fat: parseInt(editFat) || customTargets.fat,
+    };
+    setCustomTargets(newTargets);
+    setShowCustomize(false);
+  };
+
+  const handleContinue = () => {
+    // Pass custom targets if they were modified
+    if (
+      customTargets.calories !== targets.calories ||
+      customTargets.protein !== targets.protein ||
+      customTargets.carbs !== targets.carbs ||
+      customTargets.fat !== targets.fat
+    ) {
+      onContinue(customTargets);
+    } else {
+      onContinue();
+    }
+  };
+
+  const displayTargets = customTargets;
+
   return (
     <OnboardingLayout
-      currentStep={9}
-      onContinue={onContinue}
+      currentStep={16}
+      onContinue={handleContinue}
       onBack={onBack}
     >
       <View style={styles.content}>
@@ -58,7 +112,7 @@ export function TargetsScreen({ onContinue, onBack, targets, goal }: Props) {
 
         <Animated.View style={[styles.calorieCard, calorieStyle]}>
           <Text style={styles.calorieLabel}>Daily Calories</Text>
-          <Text style={styles.calorieValue}>{targets.calories.toLocaleString()}</Text>
+          <Text style={styles.calorieValue}>{displayTargets.calories.toLocaleString()}</Text>
           <Text style={styles.calorieUnit}>kcal / day</Text>
         </Animated.View>
 
@@ -69,32 +123,115 @@ export function TargetsScreen({ onContinue, onBack, targets, goal }: Props) {
               <View style={[styles.macroIcon, { backgroundColor: '#DBEAFE' }]}>
                 <Text style={styles.macroIconText}>P</Text>
               </View>
-              <Text style={styles.macroValue}>{targets.protein}g</Text>
+              <Text style={styles.macroValue}>{displayTargets.protein}g</Text>
               <Text style={styles.macroLabel}>Protein</Text>
             </View>
             <View style={styles.macroCard}>
               <View style={[styles.macroIcon, { backgroundColor: '#FEF3C7' }]}>
                 <Text style={styles.macroIconText}>C</Text>
               </View>
-              <Text style={styles.macroValue}>{targets.carbs}g</Text>
+              <Text style={styles.macroValue}>{displayTargets.carbs}g</Text>
               <Text style={styles.macroLabel}>Carbs</Text>
             </View>
             <View style={styles.macroCard}>
               <View style={[styles.macroIcon, { backgroundColor: '#D1FAE5' }]}>
                 <Text style={styles.macroIconText}>F</Text>
               </View>
-              <Text style={styles.macroValue}>{targets.fat}g</Text>
+              <Text style={styles.macroValue}>{displayTargets.fat}g</Text>
               <Text style={styles.macroLabel}>Fat</Text>
             </View>
           </View>
         </Animated.View>
 
+        <TouchableOpacity style={styles.customizeButton} onPress={handleCustomize}>
+          <Ionicons name="options-outline" size={18} color="#3B82F6" />
+          <Text style={styles.customizeText}>Customize targets</Text>
+        </TouchableOpacity>
+
         <View style={styles.noteBox}>
           <Text style={styles.noteText}>
-            These targets are calculated based on your body stats and goals. You can adjust them anytime in settings.
+            You can always adjust these later in the Macros tab.
           </Text>
         </View>
       </View>
+
+      <Modal visible={showCustomize} transparent animationType="slide">
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Customize Targets</Text>
+              <TouchableOpacity onPress={() => setShowCustomize(false)}>
+                <Ionicons name="close" size={24} color="#374151" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalBody}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Daily Calories</Text>
+                <View style={styles.inputWrapper}>
+                  <TextInput
+                    style={styles.input}
+                    value={editCalories}
+                    onChangeText={setEditCalories}
+                    keyboardType="number-pad"
+                    placeholder="2000"
+                  />
+                  <Text style={styles.inputUnit}>kcal</Text>
+                </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Protein</Text>
+                <View style={styles.inputWrapper}>
+                  <TextInput
+                    style={styles.input}
+                    value={editProtein}
+                    onChangeText={setEditProtein}
+                    keyboardType="number-pad"
+                    placeholder="150"
+                  />
+                  <Text style={styles.inputUnit}>g</Text>
+                </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Carbs</Text>
+                <View style={styles.inputWrapper}>
+                  <TextInput
+                    style={styles.input}
+                    value={editCarbs}
+                    onChangeText={setEditCarbs}
+                    keyboardType="number-pad"
+                    placeholder="200"
+                  />
+                  <Text style={styles.inputUnit}>g</Text>
+                </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Fat</Text>
+                <View style={styles.inputWrapper}>
+                  <TextInput
+                    style={styles.input}
+                    value={editFat}
+                    onChangeText={setEditFat}
+                    keyboardType="number-pad"
+                    placeholder="65"
+                  />
+                  <Text style={styles.inputUnit}>g</Text>
+                </View>
+              </View>
+
+              <TouchableOpacity style={styles.saveButton} onPress={handleSaveCustom}>
+                <Text style={styles.saveButtonText}>Save Changes</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </OnboardingLayout>
   );
 }
@@ -125,7 +262,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    marginBottom: 24,
+    marginBottom: 12,
   },
   goalText: {
     fontSize: 14,
@@ -135,10 +272,10 @@ const styles = StyleSheet.create({
   calorieCard: {
     backgroundColor: '#3B82F6',
     borderRadius: 20,
-    padding: 32,
+    padding: 20,
     alignItems: 'center',
     width: '100%',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   calorieLabel: {
     fontSize: 14,
@@ -146,7 +283,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   calorieValue: {
-    fontSize: 56,
+    fontSize: 48,
     fontWeight: '800',
     color: '#FFFFFF',
   },
@@ -157,7 +294,7 @@ const styles = StyleSheet.create({
   },
   macrosContainer: {
     width: '100%',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   macrosTitle: {
     fontSize: 14,
@@ -174,42 +311,125 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F9FAFB',
     borderRadius: 16,
-    padding: 16,
+    padding: 14,
     alignItems: 'center',
   },
   macroIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   macroIconText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: '#374151',
   },
   macroValue: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '700',
     color: '#111827',
   },
   macroLabel: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#6B7280',
     marginTop: 2,
+  },
+  customizeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  customizeText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#3B82F6',
   },
   noteBox: {
     backgroundColor: '#F3F4F6',
     borderRadius: 12,
-    padding: 16,
+    padding: 14,
     width: '100%',
   },
   noteText: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#6B7280',
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 18,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  modalBody: {
+    padding: 20,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    paddingHorizontal: 16,
+  },
+  input: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+    paddingVertical: 14,
+  },
+  inputUnit: {
+    fontSize: 16,
+    color: '#6B7280',
+  },
+  saveButton: {
+    backgroundColor: '#3B82F6',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    marginTop: 10,
+    marginBottom: 40,
+  },
+  saveButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });

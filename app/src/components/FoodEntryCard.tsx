@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { QuantityStepper } from './QuantityStepper';
 import { MealLogEntry } from '../types';
+import { useTheme } from '../context/ThemeContext';
 
 interface FoodEntryCardProps {
   entry: MealLogEntry;
@@ -21,6 +22,7 @@ export function FoodEntryCard({
   onUpdateServings,
   onDelete,
 }: FoodEntryCardProps) {
+  const { colors, radius, shadows } = useTheme();
   const translateX = useRef(new Animated.Value(0)).current;
   const deleteThreshold = -80;
 
@@ -71,23 +73,31 @@ export function FoodEntryCard({
 
   return (
     <View style={styles.wrapper}>
-      <TouchableOpacity style={styles.deleteButton} onPress={onDelete}>
-        <Text style={styles.deleteText}>Delete</Text>
+      <TouchableOpacity
+        style={[styles.deleteButton, { backgroundColor: colors.error, borderRadius: radius.md }]}
+        onPress={onDelete}
+      >
+        <Text style={[styles.deleteText, { color: colors.white }]}>Delete</Text>
       </TouchableOpacity>
       <Animated.View
-        style={[styles.container, { transform: [{ translateX }] }]}
+        style={[
+          styles.container,
+          { backgroundColor: colors.card, borderRadius: radius.md },
+          shadows.small,
+          { transform: [{ translateX }] }
+        ]}
         {...panResponder.panHandlers}
       >
         <View style={styles.content}>
           <View style={styles.header}>
-            <Text style={styles.name}>{food.name}</Text>
-            <Text style={styles.calories}>{totalCalories} kcal</Text>
+            <Text style={[styles.name, { color: colors.text }]}>{food.name}</Text>
+            <Text style={[styles.calories, { color: colors.text }]}>{totalCalories} kcal</Text>
           </View>
           <View style={styles.footer}>
             <View style={styles.macros}>
-              <Text style={styles.macro}>P: {totalProtein}g</Text>
-              <Text style={styles.macro}>C: {totalCarbs}g</Text>
-              <Text style={styles.macro}>F: {totalFat}g</Text>
+              <Text style={[styles.macro, { color: colors.textSecondary }]}>P: {totalProtein}g</Text>
+              <Text style={[styles.macro, { color: colors.textSecondary }]}>C: {totalCarbs}g</Text>
+              <Text style={[styles.macro, { color: colors.textSecondary }]}>F: {totalFat}g</Text>
             </View>
             <QuantityStepper
               value={entry.servings}
@@ -95,7 +105,7 @@ export function FoodEntryCard({
               onDecrement={handleDecrement}
             />
           </View>
-          <Text style={styles.servingInfo}>
+          <Text style={[styles.servingInfo, { color: colors.textMuted }]}>
             {entry.servings} x {food.serving_unit}
           </Text>
         </View>
@@ -115,24 +125,14 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: 80,
-    backgroundColor: '#ef4444',
-    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   deleteText: {
-    color: '#fff',
     fontWeight: '600',
     fontSize: 14,
   },
   container: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
   content: {
     padding: 16,
@@ -146,13 +146,11 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
     flex: 1,
   },
   calories: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
   },
   footer: {
     flexDirection: 'row',
@@ -166,11 +164,9 @@ const styles = StyleSheet.create({
   },
   macro: {
     fontSize: 13,
-    color: '#6b7280',
   },
   servingInfo: {
     fontSize: 12,
-    color: '#9ca3af',
     marginTop: 4,
   },
 });

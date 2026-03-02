@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { OnboardingLayout } from '../../components/OnboardingLayout';
 
 interface Props {
-  onContinue: (stats: { age: number; heightFeet: number; heightInches: number; weight: number }) => void;
+  onContinue: (stats: { heightFeet: number; heightInches: number; weight: number }) => void;
   onBack: () => void;
   initialValues?: {
-    age?: string;
     heightFeet?: string;
     heightInches?: string;
     weight?: string;
@@ -14,13 +14,11 @@ interface Props {
 }
 
 export function BodyStatsScreen({ onContinue, onBack, initialValues }: Props) {
-  const [age, setAge] = useState(initialValues?.age || '');
   const [heightFeet, setHeightFeet] = useState(initialValues?.heightFeet || '');
   const [heightInches, setHeightInches] = useState(initialValues?.heightInches || '');
   const [weight, setWeight] = useState(initialValues?.weight || '');
 
   const isValid =
-    age && parseInt(age) > 0 &&
     heightFeet && parseInt(heightFeet) >= 0 &&
     heightInches !== '' && parseInt(heightInches) >= 0 &&
     weight && parseFloat(weight) > 0;
@@ -28,7 +26,6 @@ export function BodyStatsScreen({ onContinue, onBack, initialValues }: Props) {
   const handleContinue = () => {
     if (isValid) {
       onContinue({
-        age: parseInt(age),
         heightFeet: parseInt(heightFeet),
         heightInches: parseInt(heightInches) || 0,
         weight: parseFloat(weight),
@@ -38,7 +35,7 @@ export function BodyStatsScreen({ onContinue, onBack, initialValues }: Props) {
 
   return (
     <OnboardingLayout
-      currentStep={7}
+      currentStep={11}
       onContinue={handleContinue}
       onBack={onBack}
       continueDisabled={!isValid}
@@ -51,22 +48,6 @@ export function BodyStatsScreen({ onContinue, onBack, initialValues }: Props) {
         </Text>
 
         <View style={styles.form}>
-          <View style={styles.field}>
-            <Text style={styles.fieldLabel}>Age</Text>
-            <View style={styles.inputRow}>
-              <TextInput
-                style={[styles.input, styles.inputSmall]}
-                value={age}
-                onChangeText={setAge}
-                keyboardType="number-pad"
-                placeholder="30"
-                placeholderTextColor="#9CA3AF"
-                maxLength={3}
-              />
-              <Text style={styles.unit}>years</Text>
-            </View>
-          </View>
-
           <View style={styles.field}>
             <Text style={styles.fieldLabel}>Height</Text>
             <View style={styles.inputRow}>
@@ -111,7 +92,7 @@ export function BodyStatsScreen({ onContinue, onBack, initialValues }: Props) {
         </View>
 
         <View style={styles.infoBox}>
-          <Text style={styles.infoIcon}>ℹ️</Text>
+          <Ionicons name="information-circle" size={18} color="#6B7280" style={styles.infoIcon} />
           <Text style={styles.infoText}>
             You can always update these in your profile later.
           </Text>
@@ -190,7 +171,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   infoIcon: {
-    fontSize: 18,
     marginRight: 12,
   },
   infoText: {

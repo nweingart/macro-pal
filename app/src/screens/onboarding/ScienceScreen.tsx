@@ -10,7 +10,7 @@ interface Props {
 export function ScienceScreen({ onContinue, onBack }: Props) {
   return (
     <OnboardingLayout
-      currentStep={10}
+      currentStep={15}
       onContinue={onContinue}
       onBack={onBack}
     >
@@ -26,11 +26,7 @@ export function ScienceScreen({ onContinue, onBack }: Props) {
           </View>
           <Text style={styles.methodName}>Mifflin-St Jeor Equation</Text>
           <Text style={styles.methodDescription}>
-            Developed at{' '}
-            <Text style={styles.bold}>University of Nevada</Text> and validated across thousands of subjects, this is the most accurate formula for estimating resting metabolic rate.
-          </Text>
-          <Text style={styles.citation}>
-            — Mifflin et al., American Journal of Clinical Nutrition, 1990
+            The most accurate formula for estimating resting metabolic rate.
           </Text>
         </View>
 
@@ -44,7 +40,7 @@ export function ScienceScreen({ onContinue, onBack }: Props) {
             <View style={styles.stepContent}>
               <Text style={styles.stepTitle}>Base Metabolic Rate (BMR)</Text>
               <Text style={styles.stepDescription}>
-                Calories your body burns at complete rest, calculated from your age, height, weight, and sex.
+                Calories burned at rest based on age, height, weight, and sex
               </Text>
             </View>
           </View>
@@ -58,7 +54,7 @@ export function ScienceScreen({ onContinue, onBack }: Props) {
             <View style={styles.stepContent}>
               <Text style={styles.stepTitle}>Activity Multiplier</Text>
               <Text style={styles.stepDescription}>
-                We multiply your BMR by your activity level to get your Total Daily Energy Expenditure (TDEE).
+                Multiplied by your activity level for total daily burn
               </Text>
             </View>
           </View>
@@ -72,16 +68,15 @@ export function ScienceScreen({ onContinue, onBack }: Props) {
             <View style={styles.stepContent}>
               <Text style={styles.stepTitle}>Goal Adjustment</Text>
               <Text style={styles.stepDescription}>
-                We adjust for your goal: deficit for weight loss, surplus for muscle gain, or maintenance.
+                Adjusted for your goal: deficit, surplus, or maintenance
               </Text>
             </View>
           </View>
         </View>
 
-        <View style={styles.trustBox}>
-          <Text style={styles.trustIcon}>✓</Text>
-          <Text style={styles.trustText}>
-            Used by registered dietitians and sports nutritionists worldwide
+        <View style={styles.disclaimerBox}>
+          <Text style={styles.disclaimerText}>
+            These are estimates only. We are not healthcare providers. Consult a professional before making significant diet changes.
           </Text>
         </View>
       </View>
@@ -110,8 +105,8 @@ const styles = StyleSheet.create({
   methodCard: {
     backgroundColor: '#F5F3FF',
     borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
+    padding: 14,
+    marginBottom: 14,
   },
   methodHeader: {
     marginBottom: 8,
@@ -140,17 +135,8 @@ const styles = StyleSheet.create({
     color: '#6D28D9',
     lineHeight: 22,
   },
-  bold: {
-    fontWeight: '600',
-  },
-  citation: {
-    fontSize: 12,
-    color: '#8B5CF6',
-    marginTop: 12,
-    fontStyle: 'italic',
-  },
   stepsContainer: {
-    marginBottom: 24,
+    marginBottom: 12,
   },
   stepsTitle: {
     fontSize: 14,
@@ -191,28 +177,20 @@ const styles = StyleSheet.create({
   },
   stepConnector: {
     width: 2,
-    height: 16,
+    height: 8,
     backgroundColor: '#E5E7EB',
     marginLeft: 13,
-    marginVertical: 4,
+    marginVertical: 2,
   },
-  trustBox: {
-    flexDirection: 'row',
-    backgroundColor: '#ECFDF5',
+  disclaimerBox: {
+    backgroundColor: '#FEF2F2',
     borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
+    padding: 12,
   },
-  trustIcon: {
-    fontSize: 18,
-    color: '#059669',
-    marginRight: 12,
-    fontWeight: '700',
-  },
-  trustText: {
-    flex: 1,
-    fontSize: 14,
-    color: '#065F46',
+  disclaimerText: {
+    fontSize: 13,
+    color: '#991B1B',
     lineHeight: 20,
+    textAlign: 'center',
   },
 });

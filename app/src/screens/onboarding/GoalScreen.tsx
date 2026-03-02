@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { OnboardingLayout } from '../../components/OnboardingLayout';
 
 interface Props {
@@ -11,19 +12,19 @@ interface Props {
 const GOALS = [
   {
     id: 'lose',
-    emoji: '📉',
+    icon: 'trending-down' as const,
     title: 'Lose Weight',
     description: 'Burn fat while maintaining muscle',
   },
   {
     id: 'maintain',
-    emoji: '⚖️',
+    icon: 'swap-horizontal' as const,
     title: 'Maintain Weight',
     description: 'Stay at your current weight',
   },
   {
     id: 'gain',
-    emoji: '📈',
+    icon: 'trending-up' as const,
     title: 'Gain Weight',
     description: 'Build muscle and add mass',
   },
@@ -40,7 +41,7 @@ export function GoalScreen({ onContinue, onBack, initialValue }: Props) {
 
   return (
     <OnboardingLayout
-      currentStep={5}
+      currentStep={6}
       onContinue={handleContinue}
       onBack={onBack}
       continueDisabled={!selected}
@@ -62,7 +63,7 @@ export function GoalScreen({ onContinue, onBack, initialValue }: Props) {
               ]}
               onPress={() => setSelected(goal.id)}
             >
-              <Text style={styles.optionEmoji}>{goal.emoji}</Text>
+              <Ionicons name={goal.icon} size={32} color={selected === goal.id ? '#1D4ED8' : '#6B7280'} style={styles.optionIcon} />
               <View style={styles.optionContent}>
                 <Text
                   style={[
@@ -129,8 +130,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#EFF6FF',
     borderColor: '#3B82F6',
   },
-  optionEmoji: {
-    fontSize: 32,
+  optionIcon: {
     marginRight: 16,
   },
   optionContent: {

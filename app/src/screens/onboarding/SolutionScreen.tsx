@@ -20,48 +20,20 @@ export function SolutionScreen({ onContinue, onBack }: Props) {
 
         <View style={styles.statCard}>
           <Text style={styles.statNumber}>2x</Text>
-          <Text style={styles.statLabel}>more weight lost by consistent trackers</Text>
+          <Text style={styles.statLabel}>Weight loss for people who track daily</Text>
         </View>
 
         <View style={styles.research}>
-          <Text style={styles.researchTitle}>The Evidence</Text>
-
           <View style={styles.studyCard}>
             <View style={styles.institutionBadge}>
-              <Text style={styles.institutionText}>KAISER PERMANENTE</Text>
+              <Text style={styles.institutionText}>AMERICAN JOURNAL OF PREVENTIVE MEDICINE</Text>
             </View>
             <Text style={styles.studyText}>
-              A study of{' '}
-              <Text style={styles.bold}>1,700 participants</Text>{' '}
-              found that those who kept daily food records lost{' '}
-              <Text style={styles.bold}>twice as much weight</Text>{' '}
-              as those who didn't track.
+              Study of <Text style={styles.bold}>1,700 participants</Text> found that those who
+              kept daily food records lost <Text style={styles.bold}>twice as much weight</Text>.
             </Text>
-            <Text style={styles.citation}>
-              — Hollis et al., American Journal of Preventive Medicine, 2008
-            </Text>
+            <Text style={styles.citation}>Hollis et al., 2008</Text>
           </View>
-
-          <View style={styles.studyCard}>
-            <View style={styles.institutionBadge}>
-              <Text style={styles.institutionText}>UNIVERSITY OF PITTSBURGH</Text>
-            </View>
-            <Text style={styles.studyText}>
-              A comprehensive meta-analysis confirmed that{' '}
-              <Text style={styles.bold}>self-monitoring is the single strongest predictor</Text>{' '}
-              of successful weight management.
-            </Text>
-            <Text style={styles.citation}>
-              — Burke et al., Journal of the American Dietetic Association, 2011
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.insightBox}>
-          <Text style={styles.insightEmoji}>💡</Text>
-          <Text style={styles.insightText}>
-            The simple act of tracking creates awareness that naturally guides better choices.
-          </Text>
         </View>
       </View>
     </OnboardingLayout>
@@ -88,49 +60,39 @@ const styles = StyleSheet.create({
   },
   statCard: {
     backgroundColor: '#ECFDF5',
-    borderRadius: 16,
-    padding: 24,
+    borderRadius: 20,
+    padding: 18,
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 16,
   },
   statNumber: {
-    fontSize: 56,
+    fontSize: 48,
     fontWeight: '800',
     color: '#10B981',
+    lineHeight: 54,
   },
   statLabel: {
     fontSize: 15,
     color: '#065F46',
     textAlign: 'center',
-    marginTop: 4,
+    marginTop: 8,
   },
-  research: {
-    marginBottom: 20,
-  },
-  researchTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#6B7280',
-    marginBottom: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
+  research: {},
   studyCard: {
     backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: 16,
+    padding: 18,
   },
   institutionBadge: {
     backgroundColor: '#DBEAFE',
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 4,
+    paddingVertical: 5,
+    borderRadius: 6,
     alignSelf: 'flex-start',
-    marginBottom: 10,
+    marginBottom: 12,
   },
   institutionText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '700',
     color: '#1D4ED8',
     letterSpacing: 0.5,
@@ -147,24 +109,7 @@ const styles = StyleSheet.create({
   citation: {
     fontSize: 13,
     color: '#9CA3AF',
-    marginTop: 8,
+    marginTop: 10,
     fontStyle: 'italic',
-  },
-  insightBox: {
-    flexDirection: 'row',
-    backgroundColor: '#FEF3C7',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-  },
-  insightEmoji: {
-    fontSize: 24,
-    marginRight: 12,
-  },
-  insightText: {
-    flex: 1,
-    fontSize: 14,
-    color: '#92400E',
-    lineHeight: 20,
   },
 });

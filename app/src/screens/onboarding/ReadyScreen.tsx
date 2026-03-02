@@ -9,6 +9,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { OnboardingLayout } from '../../components/OnboardingLayout';
+import { Mascot } from '../../components/Mascot';
 
 interface Props {
   onContinue: () => void;
@@ -46,19 +47,19 @@ export function ReadyScreen({ onContinue, targets, firstFood }: Props) {
 
   return (
     <OnboardingLayout
-      currentStep={12}
+      currentStep={18}
       onContinue={onContinue}
       continueLabel="Start Tracking"
       showBack={false}
     >
       <View style={styles.content}>
-        <Animated.View style={[styles.checkCircle, checkStyle]}>
-          <Text style={styles.checkEmoji}>🎉</Text>
+        <Animated.View style={[styles.mascotContainer, checkStyle]}>
+          <Mascot size={100} mood="celebrating" />
         </Animated.View>
 
         <Text style={styles.title}>You're all set!</Text>
         <Text style={styles.subtitle}>
-          Your personalized meal tracker is ready to go.
+          Your Macro Pal is ready to help you hit your goals!
         </Text>
 
         <Animated.View style={[styles.summaryContainer, contentStyle]}>
@@ -94,22 +95,6 @@ export function ReadyScreen({ onContinue, targets, firstFood }: Props) {
               </View>
             </View>
           </View>
-
-          <View style={styles.tipsContainer}>
-            <Text style={styles.tipsTitle}>Quick tips to get started:</Text>
-            <View style={styles.tipItem}>
-              <Text style={styles.tipBullet}>•</Text>
-              <Text style={styles.tipText}>Log meals right after eating</Text>
-            </View>
-            <View style={styles.tipItem}>
-              <Text style={styles.tipBullet}>•</Text>
-              <Text style={styles.tipText}>Use the + button to add food quickly</Text>
-            </View>
-            <View style={styles.tipItem}>
-              <Text style={styles.tipBullet}>•</Text>
-              <Text style={styles.tipText}>Check your progress in the Tracking tab</Text>
-            </View>
-          </View>
         </Animated.View>
       </View>
     </OnboardingLayout>
@@ -121,17 +106,8 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
   },
-  checkCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#ECFDF5',
-    alignItems: 'center',
-    justifyContent: 'center',
+  mascotContainer: {
     marginBottom: 24,
-  },
-  checkEmoji: {
-    fontSize: 48,
   },
   title: {
     fontSize: 32,
@@ -143,7 +119,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 17,
     color: '#6B7280',
-    marginBottom: 32,
+    marginBottom: 16,
     textAlign: 'center',
   },
   summaryContainer: {
@@ -153,7 +129,7 @@ const styles = StyleSheet.create({
   firstFoodCard: {
     backgroundColor: '#ECFDF5',
     borderRadius: 16,
-    padding: 20,
+    padding: 14,
     alignItems: 'center',
   },
   firstFoodLabel: {
@@ -177,7 +153,7 @@ const styles = StyleSheet.create({
   targetsCard: {
     backgroundColor: '#F9FAFB',
     borderRadius: 16,
-    padding: 20,
+    padding: 14,
   },
   targetsTitle: {
     fontSize: 14,
@@ -208,31 +184,5 @@ const styles = StyleSheet.create({
     width: 1,
     height: 32,
     backgroundColor: '#E5E7EB',
-  },
-  tipsContainer: {
-    backgroundColor: '#F3F4F6',
-    borderRadius: 12,
-    padding: 16,
-  },
-  tipsTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 12,
-  },
-  tipItem: {
-    flexDirection: 'row',
-    marginBottom: 8,
-  },
-  tipBullet: {
-    fontSize: 14,
-    color: '#3B82F6',
-    marginRight: 8,
-    fontWeight: '600',
-  },
-  tipText: {
-    flex: 1,
-    fontSize: 14,
-    color: '#6B7280',
   },
 });

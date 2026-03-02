@@ -1,5 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
+import { toISODate } from '../utils/date';
 
 interface CalendarViewProps {
   selectedDate: Date;
@@ -12,10 +14,6 @@ const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
-
-function formatDateKey(date: Date): string {
-  return date.toISOString().split('T')[0];
-}
 
 function getDaysInMonth(year: number, month: number): Date[] {
   const firstDay = new Date(year, month, 1);
@@ -43,6 +41,7 @@ function getDaysInMonth(year: number, month: number): Date[] {
 }
 
 export function CalendarView({ selectedDate, onSelectDate, markedDates }: CalendarViewProps) {
+  const { colors, radius, shadows } = useTheme();
   const [viewDate, setViewDate] = React.useState(new Date(selectedDate));
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
@@ -58,27 +57,27 @@ export function CalendarView({ selectedDate, onSelectDate, markedDates }: Calend
   };
 
   const isCurrentMonth = (date: Date) => date.getMonth() === month;
-  const isToday = (date: Date) => formatDateKey(date) === formatDateKey(today);
-  const isSelected = (date: Date) => formatDateKey(date) === formatDateKey(selectedDate);
-  const hasLog = (date: Date) => markedDates.has(formatDateKey(date));
+  const isToday = (date: Date) => toISODate(date) === toISODate(today);
+  const isSelected = (date: Date) => toISODate(date) === toISODate(selectedDate);
+  const hasLog = (date: Date) => markedDates.has(toISODate(date));
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.card, borderRadius: radius.md }, shadows.small]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={goToPreviousMonth} style={styles.navButton}>
-          <Text style={styles.navButtonText}>{'<'}</Text>
+          <Text style={[styles.navButtonText, { color: colors.primary }]}>{'<'}</Text>
         </TouchableOpacity>
-        <Text style={styles.monthYear}>
+        <Text style={[styles.monthYear, { color: colors.text }]}>
           {MONTHS[month]} {year}
         </Text>
         <TouchableOpacity onPress={goToNextMonth} style={styles.navButton}>
-          <Text style={styles.navButtonText}>{'>'}</Text>
+          <Text style={[styles.navButtonText, { color: colors.primary }]}>{'>'}</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.weekDays}>
         {DAYS.map((day) => (
-          <Text key={day} style={styles.weekDay}>
+          <Text key={day} style={[styles.weekDay, { color: colors.textSecondary }]}>
             {day}
           </Text>
         ))}
@@ -88,24 +87,34 @@ export function CalendarView({ selectedDate, onSelectDate, markedDates }: Calend
         {days.map((date, index) => (
           <TouchableOpacity
             key={index}
-            style={[
-              styles.day,
-              isSelected(date) && styles.selectedDay,
-              isToday(date) && styles.todayDay,
-            ]}
+            style={styles.dayCell}
             onPress={() => onSelectDate(date)}
           >
-            <Text
+            <View
               style={[
-                styles.dayText,
-                !isCurrentMonth(date) && styles.otherMonthText,
-                isSelected(date) && styles.selectedDayText,
+                styles.dayInner,
+                isSelected(date) && [styles.selectedDay, { backgroundColor: colors.primary }],
+                isToday(date) && !isSelected(date) && [styles.todayDay, { borderColor: colors.primary }],
               ]}
             >
-              {date.getDate()}
-            </Text>
+              <Text
+                style={[
+                  styles.dayText,
+                  { color: colors.text },
+                  !isCurrentMonth(date) && { color: colors.textLight },
+                  isSelected(date) && { color: colors.white, fontWeight: '600' },
+                ]}
+              >
+                {date.getDate()}
+              </Text>
+            </View>
             {hasLog(date) && isCurrentMonth(date) && (
-              <View style={[styles.dot, isSelected(date) && styles.selectedDot]} />
+              <View
+                style={[
+                  styles.dot,
+                  { backgroundColor: isSelected(date) ? colors.primary : colors.primary },
+                ]}
+              />
             )}
           </TouchableOpacity>
         ))}
@@ -116,14 +125,7 @@ export function CalendarView({ selectedDate, onSelectDate, markedDates }: Calend
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
     padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
   header: {
     flexDirection: 'row',
@@ -136,13 +138,11 @@ const styles = StyleSheet.create({
   },
   navButtonText: {
     fontSize: 18,
-    color: '#3b82f6',
     fontWeight: '600',
   },
   monthYear: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#111827',
   },
   weekDays: {
     flexDirection: 'row',
@@ -153,47 +153,37 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 12,
     fontWeight: '500',
-    color: '#6b7280',
   },
   daysGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
   },
-  day: {
+  dayCell: {
     width: '14.28%',
     aspectRatio: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  dayInner: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 16,
+  },
   todayDay: {
-    borderWidth: 1,
-    borderColor: '#3b82f6',
-    borderRadius: 20,
+    borderWidth: 2,
   },
   selectedDay: {
-    backgroundColor: '#3b82f6',
-    borderRadius: 20,
+    // backgroundColor applied inline
   },
   dayText: {
     fontSize: 14,
-    color: '#111827',
-  },
-  otherMonthText: {
-    color: '#d1d5db',
-  },
-  selectedDayText: {
-    color: '#fff',
-    fontWeight: '600',
   },
   dot: {
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#3b82f6',
-    position: 'absolute',
-    bottom: 6,
-  },
-  selectedDot: {
-    backgroundColor: '#fff',
+    marginTop: 2,
   },
 });

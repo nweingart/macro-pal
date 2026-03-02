@@ -8,13 +8,19 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { DailyTotals } from '../components/DailyTotals';
 import { FoodEntryCard } from '../components/FoodEntryCard';
 import { AddFoodModal } from '../components/AddFoodModal';
+import { MicronutrientsModal } from '../components/MicronutrientsModal';
+import { EmptyState } from '../components/EmptyState';
 import { useMealLog } from '../hooks/useMealLog';
 import { useFoodLibrary } from '../hooks/useFoodLibrary';
+import { useTheme } from '../context/ThemeContext';
 import { MacroTargets } from '../types';
+import { toISODate } from '../utils/date';
 
 const DEFAULT_TARGETS: MacroTargets = {
   calories: 2000,
@@ -23,15 +29,14 @@ const DEFAULT_TARGETS: MacroTargets = {
   fat: 65,
 };
 
-function formatDate(date: Date): string {
-  return date.toISOString().split('T')[0];
-}
-
 export function TodayScreen() {
-  const today = formatDate(new Date());
+  const { colors, radius, shadows } = useTheme();
+  const insets = useSafeAreaInsets();
+  const today = toISODate(new Date());
   const { dailyLog, loading, error, refresh, addEntry, updateServings, deleteEntry } = useMealLog(today);
   const { foods } = useFoodLibrary();
   const [modalVisible, setModalVisible] = useState(false);
+  const [nutrientsModalVisible, setNutrientsModalVisible] = useState(false);
   const [addingFood, setAddingFood] = useState(false);
 
   useFocusEffect(
@@ -58,15 +63,37 @@ export function TodayScreen() {
   const entries = dailyLog?.entries || [];
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FlatList
         data={entries}
         keyExtractor={(item) => item.id}
         ListHeaderComponent={
           <View>
             <DailyTotals totals={totals} targets={DEFAULT_TARGETS} />
+
+            {/* Micronutrients Button */}
             {entries.length > 0 && (
-              <Text style={styles.sectionTitle}>Today's Food</Text>
+              <TouchableOpacity
+                style={[styles.nutrientsButton, { backgroundColor: colors.card, borderRadius: radius.md }]}
+                onPress={() => setNutrientsModalVisible(true)}
+              >
+                <View style={styles.nutrientsButtonContent}>
+                  <View style={[styles.nutrientsIcon, { backgroundColor: colors.primaryLight }]}>
+                    <Ionicons name="leaf-outline" size={20} color={colors.primary} />
+                  </View>
+                  <View style={styles.nutrientsTextContainer}>
+                    <Text style={[styles.nutrientsTitle, { color: colors.text }]}>Vitamins & Minerals</Text>
+                    <Text style={[styles.nutrientsSubtitle, { color: colors.textSecondary }]}>
+                      See estimated micronutrients
+                    </Text>
+                  </View>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+              </TouchableOpacity>
+            )}
+
+            {entries.length > 0 && (
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Today's Food</Text>
             )}
           </View>
         }
@@ -79,27 +106,38 @@ export function TodayScreen() {
         )}
         ListEmptyComponent={
           loading ? (
-            <ActivityIndicator style={styles.loader} />
+            <ActivityIndicator style={styles.loader} color={colors.primary} />
           ) : (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No food logged today</Text>
-              <Text style={styles.emptySubtext}>
-                Tap the + button to add your first meal
-              </Text>
-            </View>
+            <EmptyState
+              showMascot
+              mascotMood="thinking"
+              title="No food logged today"
+              subtitle="Tap the + button to add your first meal"
+              actionLabel="Add Food"
+              onAction={() => setModalVisible(true)}
+            />
           )
         }
         contentContainerStyle={styles.listContent}
         refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={refresh} />
+          <RefreshControl refreshing={loading} onRefresh={refresh} tintColor={colors.primary} />
         }
       />
 
       <TouchableOpacity
-        style={styles.fab}
+        style={[
+          styles.fab,
+          {
+            backgroundColor: colors.primary,
+            borderRadius: radius.full,
+            bottom: 16 + insets.bottom,
+          },
+          shadows.large,
+        ]}
         onPress={() => setModalVisible(true)}
+        activeOpacity={0.8}
       >
-        <Text style={styles.fabText}>+</Text>
+        <Ionicons name="add" size={32} color={colors.white} />
       </TouchableOpacity>
 
       <AddFoodModal
@@ -109,6 +147,12 @@ export function TodayScreen() {
         foods={foods}
         loading={addingFood}
       />
+
+      <MicronutrientsModal
+        visible={nutrientsModalVisible}
+        onClose={() => setNutrientsModalVisible(false)}
+        date={today}
+      />
     </View>
   );
 }
@@ -116,7 +160,6 @@ export function TodayScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
   },
   listContent: {
     padding: 16,
@@ -125,7 +168,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#111827',
     marginBottom: 12,
     marginTop: 8,
   },
@@ -135,36 +177,52 @@ const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: 'center',
     marginTop: 40,
+    gap: 8,
   },
   emptyText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#6b7280',
+    marginTop: 8,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#9ca3af',
-    marginTop: 4,
   },
   fab: {
     position: 'absolute',
     right: 16,
-    bottom: 16,
     width: 56,
     height: 56,
-    borderRadius: 28,
-    backgroundColor: '#3b82f6',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
   },
-  fabText: {
-    fontSize: 28,
-    color: '#fff',
-    fontWeight: '400',
+  nutrientsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 14,
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  nutrientsButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  nutrientsIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nutrientsTextContainer: {
+    gap: 2,
+  },
+  nutrientsTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  nutrientsSubtitle: {
+    fontSize: 13,
   },
 });

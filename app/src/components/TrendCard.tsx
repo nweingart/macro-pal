@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
 
 interface TrendCardProps {
   title: string;
@@ -9,39 +10,33 @@ interface TrendCardProps {
   color?: string;
 }
 
-export function TrendCard({ title, value, subtitle, trend, color = '#3b82f6' }: TrendCardProps) {
+export function TrendCard({ title, value, subtitle, trend, color }: TrendCardProps) {
+  const { colors, radius, shadows } = useTheme();
+  const displayColor = color || colors.primary;
   const trendIcon = trend === 'up' ? '↑' : trend === 'down' ? '↓' : '';
-  const trendColor = trend === 'up' ? '#10b981' : trend === 'down' ? '#ef4444' : '#6b7280';
+  const trendColor = trend === 'up' ? colors.success : trend === 'down' ? colors.error : colors.textSecondary;
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{title}</Text>
+    <View style={[styles.container, { backgroundColor: colors.card, borderRadius: radius.md }, shadows.small]}>
+      <Text style={[styles.title, { color: colors.textSecondary }]}>{title}</Text>
       <View style={styles.valueContainer}>
-        <Text style={[styles.value, { color }]}>{value}</Text>
+        <Text style={[styles.value, { color: displayColor }]}>{value}</Text>
         {trend && (
           <Text style={[styles.trend, { color: trendColor }]}>{trendIcon}</Text>
         )}
       </View>
-      {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+      {subtitle && <Text style={[styles.subtitle, { color: colors.textMuted }]}>{subtitle}</Text>}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
     padding: 16,
     flex: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
   title: {
     fontSize: 13,
-    color: '#6b7280',
     marginBottom: 4,
   },
   valueContainer: {
@@ -59,7 +54,6 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 12,
-    color: '#9ca3af',
     marginTop: 4,
   },
 });

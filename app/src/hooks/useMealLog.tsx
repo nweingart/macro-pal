@@ -13,8 +13,11 @@ export function useMealLog(date: string) {
       setError(null);
       const data = await api.getLogByDate(date);
       setDailyLog(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch log');
+    } catch (err: any) {
+      // Ignore 401 errors (user logged out or deleted)
+      if (err?.response?.status !== 401) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch log');
+      }
     } finally {
       setLoading(false);
     }
@@ -30,8 +33,11 @@ export function useMealLog(date: string) {
       const entry = await api.createLogEntry(input);
       await fetchLog();
       return entry;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add entry');
+    } catch (err: any) {
+      // Ignore 401 errors (user logged out or deleted)
+      if (err?.response?.status !== 401) {
+        setError(err instanceof Error ? err.message : 'Failed to add entry');
+      }
       return null;
     }
   };
@@ -42,8 +48,11 @@ export function useMealLog(date: string) {
       await api.updateLogEntry(id, servings);
       await fetchLog();
       return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update entry');
+    } catch (err: any) {
+      // Ignore 401 errors (user logged out or deleted)
+      if (err?.response?.status !== 401) {
+        setError(err instanceof Error ? err.message : 'Failed to update entry');
+      }
       return false;
     }
   };
@@ -54,8 +63,11 @@ export function useMealLog(date: string) {
       await api.deleteLogEntry(id);
       await fetchLog();
       return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete entry');
+    } catch (err: any) {
+      // Ignore 401 errors (user logged out or deleted)
+      if (err?.response?.status !== 401) {
+        setError(err instanceof Error ? err.message : 'Failed to delete entry');
+      }
       return false;
     }
   };
