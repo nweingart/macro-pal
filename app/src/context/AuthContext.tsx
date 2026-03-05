@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import * as Sentry from '@sentry/react-native';
 import { supabase } from '../services/supabase';
 import { setOnUnauthorized } from '../services/api';
 import { logger } from '../utils/logger';
@@ -57,7 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
         setSession(session);
         setUser(session?.user ?? null);
-        Sentry.setUser(session?.user ? { id: session.user.id, email: session.user.email } : null);
+        // User tracking can be added here later (e.g. analytics)
       }
     );
 
@@ -186,8 +185,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Clear local state FIRST to immediately prevent API calls from other components
     setUser(null);
     setSession(null);
-    Sentry.setUser(null);
-
     // Then sign out from Supabase (may fail if user already deleted, that's fine)
     try {
       await supabase.auth.signOut();

@@ -1,19 +1,8 @@
 import React from 'react';
 import { LogBox } from 'react-native';
-import * as Sentry from '@sentry/react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-// Initialize Sentry before anything else
-const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN;
-if (SENTRY_DSN) {
-  Sentry.init({
-    dsn: SENTRY_DSN,
-    enabled: !__DEV__,
-    tracesSampleRate: 0.2,
-  });
-}
-
-// Silence all console output in production builds (after Sentry init)
+// Silence all console output in production builds
 if (!__DEV__) {
   console.log = () => {};
   console.warn = () => {};
