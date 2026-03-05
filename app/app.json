@@ -19,7 +19,8 @@
       "infoPlist": {
         "NSSpeechRecognitionUsageDescription": "Macro Pal uses speech recognition to let you log food by speaking naturally.",
         "NSMicrophoneUsageDescription": "Macro Pal needs microphone access to convert your speech to text for food logging.",
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSPhotoLibraryUsageDescription": "Macro Pal may access your photo library to let you add images of your meals."
       }
     },
     "android": {
