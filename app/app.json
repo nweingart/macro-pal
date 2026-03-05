@@ -41,7 +41,7 @@
       "expo-speech-recognition",
       "expo-web-browser",
       "@react-native-community/datetimepicker",
-      "@sentry/react-native"
+      ["@sentry/react-native", { "disableAutoUpload": true }]
     ],
     "extra": {
       "eas": {
