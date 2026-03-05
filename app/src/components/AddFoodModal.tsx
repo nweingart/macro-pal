@@ -16,9 +16,11 @@ import { Ionicons } from '@expo/vector-icons';
 import {
   ExpoSpeechRecognitionModule,
   useSpeechRecognitionEvent,
-} from 'expo-speech-recognition';
+} from '../utils/speechRecognition';
 import { Food } from '../types';
 import { useTheme } from '../context/ThemeContext';
+import { Mascot } from './Mascot';
+import { SpeechBubble } from './SpeechBubble';
 
 interface AddFoodModalProps {
   visible: boolean;
@@ -108,9 +110,14 @@ export function AddFoodModal({
     }
   };
 
-  const filteredFoods = foods.filter((food) =>
-    food.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredFoods = foods
+    .filter((food) => food.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    .sort((a, b) => b.times_used - a.times_used);
+
+  const quickAddFoods = foods
+    .slice()
+    .sort((a, b) => b.times_used - a.times_used)
+    .slice(0, 3);
 
   const handleSubmit = async () => {
     if (input.trim()) {
@@ -149,11 +156,16 @@ export function AddFoodModal({
           style={styles.container}
         >
         <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={handleClose}>
+          <TouchableOpacity onPress={handleClose} accessibilityLabel="Cancel" accessibilityRole="button">
             <Text style={[styles.cancelButton, { color: colors.primary }]}>Cancel</Text>
           </TouchableOpacity>
           <Text style={[styles.title, { color: colors.text }]}>Add Food</Text>
           <View style={{ width: 60 }} />
+        </View>
+
+        <View style={styles.teddyRow}>
+          <SpeechBubble message="What did you have?" />
+          <Mascot size={72} mood="happy" />
         </View>
 
         <View style={styles.tabContainer}>
@@ -163,6 +175,8 @@ export function AddFoodModal({
               { backgroundColor: mode === 'input' ? colors.primary : colors.border, borderRadius: radius.sm },
             ]}
             onPress={() => setMode('input')}
+            accessibilityLabel="Describe food"
+            accessibilityRole="button"
           >
             <Text style={[styles.tabText, { color: mode === 'input' ? colors.white : colors.textSecondary }]}>
               Describe
@@ -174,6 +188,8 @@ export function AddFoodModal({
               { backgroundColor: mode === 'library' ? colors.primary : colors.border, borderRadius: radius.sm },
             ]}
             onPress={() => setMode('library')}
+            accessibilityLabel="Select from library"
+            accessibilityRole="button"
           >
             <Text style={[styles.tabText, { color: mode === 'library' ? colors.white : colors.textSecondary }]}>
               Library
@@ -200,6 +216,7 @@ export function AddFoodModal({
                 onChangeText={setInput}
                 multiline
                 autoFocus={!isListening}
+                accessibilityLabel="Describe what you ate"
               />
               <TouchableOpacity
                 style={[
@@ -211,6 +228,8 @@ export function AddFoodModal({
                 ]}
                 onPress={toggleListening}
                 activeOpacity={0.7}
+                accessibilityLabel={isListening ? 'Stop listening' : 'Start voice input'}
+                accessibilityRole="button"
               >
                 <Ionicons
                   name={isListening ? 'mic' : 'mic-outline'}
@@ -235,6 +254,8 @@ export function AddFoodModal({
               ]}
               onPress={handleSubmit}
               disabled={!input.trim() || loading}
+              accessibilityLabel="Add food"
+              accessibilityRole="button"
             >
               {loading ? (
                 <ActivityIndicator color={colors.white} />
@@ -242,6 +263,26 @@ export function AddFoodModal({
                 <Text style={[styles.submitButtonText, { color: colors.white }]}>Add</Text>
               )}
             </TouchableOpacity>
+            {quickAddFoods.length > 0 && (
+              <View style={styles.quickAddSection}>
+                <Text style={[styles.quickAddLabel, { color: colors.textMuted }]}>Quick add</Text>
+                <View style={styles.quickAddRow}>
+                  {quickAddFoods.map((food) => (
+                    <TouchableOpacity
+                      key={food.id}
+                      style={[styles.quickAddChip, { backgroundColor: colors.card, borderColor: colors.border }]}
+                      onPress={() => handleSelectFood(food)}
+                      accessibilityLabel={`Quick add ${food.name}`}
+                      accessibilityRole="button"
+                    >
+                      <Text style={[styles.quickAddChipText, { color: colors.primary }]} numberOfLines={1}>
+                        {food.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
           </View>
         ) : (
           <View style={styles.libraryContainer}>
@@ -259,6 +300,7 @@ export function AddFoodModal({
               placeholderTextColor={colors.textMuted}
               value={searchQuery}
               onChangeText={setSearchQuery}
+              accessibilityLabel="Search your foods"
             />
             <FlatList
               data={filteredFoods}
@@ -267,6 +309,8 @@ export function AddFoodModal({
                 <TouchableOpacity
                   style={[styles.foodItem, { backgroundColor: colors.card, borderRadius: radius.md }]}
                   onPress={() => handleSelectFood(item)}
+                  accessibilityLabel={`Add ${item.name}`}
+                  accessibilityRole="button"
                 >
                   <View>
                     <Text style={[styles.foodName, { color: colors.text }]}>{item.name}</Text>
@@ -301,6 +345,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
+  },
+  teddyRow: {
+    alignItems: 'center',
+    paddingTop: 12,
+    paddingBottom: 4,
   },
   cancelButton: {
     fontSize: 16,
@@ -405,5 +454,27 @@ const styles = StyleSheet.create({
   emptyText: {
     textAlign: 'center',
     marginTop: 32,
+  },
+  quickAddSection: {
+    marginTop: 20,
+  },
+  quickAddLabel: {
+    fontSize: 12,
+    marginBottom: 8,
+  },
+  quickAddRow: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  quickAddChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  quickAddChipText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
 });

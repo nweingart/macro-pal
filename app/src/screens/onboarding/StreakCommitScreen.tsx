@@ -8,6 +8,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { OnboardingLayout } from '../../components/OnboardingLayout';
+import { useFunnelStep } from '@nedweingart/funnel-kit-react-native';
 
 interface Props {
   onContinue: () => void;
@@ -17,6 +18,7 @@ interface Props {
 const DAYS = [1, 2, 3, 4, 5];
 
 export function StreakCommitScreen({ onContinue, onBack }: Props) {
+  useFunnelStep('StreakCommit');
   const circleScales = DAYS.map(() => useSharedValue(0));
 
   useEffect(() => {

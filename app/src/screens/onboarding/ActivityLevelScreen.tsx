@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { OnboardingLayout } from '../../components/OnboardingLayout';
+import { useFunnelStep } from '@nedweingart/funnel-kit-react-native';
 
 interface Props {
   onContinue: (activityLevel: string) => void;
@@ -42,6 +43,7 @@ const ACTIVITY_LEVELS = [
 ];
 
 export function ActivityLevelScreen({ onContinue, onBack, initialValue }: Props) {
+  useFunnelStep('ActivityLevel');
   const [selected, setSelected] = useState<string | null>(initialValue || null);
 
   const handleContinue = () => {
@@ -73,6 +75,8 @@ export function ActivityLevelScreen({ onContinue, onBack, initialValue }: Props)
                 selected === level.id && styles.optionCardSelected,
               ]}
               onPress={() => setSelected(level.id)}
+              accessibilityLabel={`Select ${level.label}`}
+              accessibilityRole="radio"
             >
               <View style={styles.optionLeft}>
                 <View

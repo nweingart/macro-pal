@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { OnboardingLayout } from '../../components/OnboardingLayout';
+import { useFunnelStep } from '@nedweingart/funnel-kit-react-native';
 
 interface Props {
   onContinue: (frequency: string) => void;
@@ -37,6 +38,7 @@ const FREQUENCIES = [
 ];
 
 export function MealFrequencyScreen({ onContinue, onBack, initialValue }: Props) {
+  useFunnelStep('MealFrequency');
   const [selected, setSelected] = useState<string | null>(initialValue || null);
 
   const handleContinue = () => {
@@ -68,6 +70,8 @@ export function MealFrequencyScreen({ onContinue, onBack, initialValue }: Props)
                 selected === frequency.id && styles.optionCardSelected,
               ]}
               onPress={() => setSelected(frequency.id)}
+              accessibilityLabel={`Select ${frequency.title}`}
+              accessibilityRole="radio"
             >
               <Ionicons name={frequency.icon} size={32} color={selected === frequency.id ? '#1D4ED8' : '#6B7280'} style={styles.optionIcon} />
               <View style={styles.optionContent}>

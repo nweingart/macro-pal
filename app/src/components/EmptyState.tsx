@@ -46,6 +46,8 @@ export function EmptyState({
         <TouchableOpacity
           style={[styles.actionButton, { backgroundColor: colors.primary, borderRadius: radius.sm }]}
           onPress={onAction}
+          accessibilityLabel={actionLabel}
+          accessibilityRole="button"
         >
           <Text style={[styles.actionButtonText, { color: colors.white }]}>{actionLabel}</Text>
         </TouchableOpacity>

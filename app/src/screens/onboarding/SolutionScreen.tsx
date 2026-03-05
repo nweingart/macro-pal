@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { OnboardingLayout } from '../../components/OnboardingLayout';
+import { useFunnelStep } from '@nedweingart/funnel-kit-react-native';
 
 interface Props {
   onContinue: () => void;
@@ -8,6 +9,7 @@ interface Props {
 }
 
 export function SolutionScreen({ onContinue, onBack }: Props) {
+  useFunnelStep('Solution');
   return (
     <OnboardingLayout
       currentStep={3}

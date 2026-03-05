@@ -38,6 +38,11 @@ export function LoginScreen() {
       return;
     }
 
+    if (isSignUp && password.length < 8) {
+      setError('Password must be at least 8 characters');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -107,6 +112,7 @@ export function LoginScreen() {
           onChangeText={setEmail}
           autoCapitalize="none"
           keyboardType="email-address"
+          accessibilityLabel="Email address"
         />
 
         <TextInput
@@ -124,7 +130,14 @@ export function LoginScreen() {
           value={password}
           onChangeText={setPassword}
           secureTextEntry
+          accessibilityLabel="Password"
         />
+
+        {isSignUp && password.length > 0 && password.length < 8 && (
+          <Text style={[styles.passwordHint, { color: colors.textMuted }]}>
+            {8 - password.length} more character{8 - password.length !== 1 ? 's' : ''} needed
+          </Text>
+        )}
 
         <TouchableOpacity
           style={[
@@ -136,6 +149,8 @@ export function LoginScreen() {
           ]}
           onPress={handleSubmit}
           disabled={loading}
+          accessibilityLabel={isSignUp ? 'Sign up' : 'Sign in'}
+          accessibilityRole="button"
         >
           {loading ? (
             <ActivityIndicator color={colors.white} />
@@ -152,6 +167,8 @@ export function LoginScreen() {
             setIsSignUp(!isSignUp);
             setError(null);
           }}
+          accessibilityLabel={isSignUp ? 'Switch to sign in' : 'Switch to sign up'}
+          accessibilityRole="button"
         >
           <Text style={[styles.switchText, { color: colors.primary }]}>
             {isSignUp
@@ -161,11 +178,11 @@ export function LoginScreen() {
         </TouchableOpacity>
 
         <View style={styles.legalLinks}>
-          <TouchableOpacity onPress={() => { setLegalTab('privacy'); setLegalVisible(true); }}>
+          <TouchableOpacity onPress={() => { setLegalTab('privacy'); setLegalVisible(true); }} accessibilityLabel="View privacy policy" accessibilityRole="button">
             <Text style={[styles.legalText, { color: colors.textMuted }]}>Privacy Policy</Text>
           </TouchableOpacity>
           <Text style={[styles.legalSeparator, { color: colors.textMuted }]}> | </Text>
-          <TouchableOpacity onPress={() => { setLegalTab('terms'); setLegalVisible(true); }}>
+          <TouchableOpacity onPress={() => { setLegalTab('terms'); setLegalVisible(true); }} accessibilityLabel="View terms of service" accessibilityRole="button">
             <Text style={[styles.legalText, { color: colors.textMuted }]}>Terms of Service</Text>
           </TouchableOpacity>
         </View>
@@ -241,5 +258,11 @@ const styles = StyleSheet.create({
   },
   legalSeparator: {
     fontSize: 13,
+  },
+  passwordHint: {
+    fontSize: 12,
+    marginTop: -8,
+    marginBottom: 8,
+    marginLeft: 4,
   },
 });

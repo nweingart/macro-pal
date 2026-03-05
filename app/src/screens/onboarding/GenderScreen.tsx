@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { OnboardingLayout } from '../../components/OnboardingLayout';
+import { useFunnelStep } from '@nedweingart/funnel-kit-react-native';
 
 interface Props {
   onContinue: (gender: string) => void;
@@ -16,6 +17,7 @@ const GENDERS = [
 ];
 
 export function GenderScreen({ onContinue, onBack, initialValue }: Props) {
+  useFunnelStep('Gender');
   const [selected, setSelected] = useState<string | null>(initialValue || null);
 
   const handleContinue = () => {
@@ -47,6 +49,8 @@ export function GenderScreen({ onContinue, onBack, initialValue }: Props) {
                 selected === gender.id && styles.optionCardSelected,
               ]}
               onPress={() => setSelected(gender.id)}
+              accessibilityLabel={`Select ${gender.label}`}
+              accessibilityRole="radio"
             >
               <Ionicons name={gender.icon} size={40} color={selected === gender.id ? '#1D4ED8' : '#6B7280'} style={styles.optionIcon} />
               <Text

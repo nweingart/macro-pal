@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { AuthenticatedRequest } from '../types';
 import { parseFoodInput } from '../services/ai';
+import { logger } from '../logger';
 
 const router = Router();
 
@@ -42,29 +43,6 @@ const createLogEntry: RequestHandler = async (req, res) => {
         protein_per_serving: parsedFood.protein_per_serving,
         carbs_per_serving: parsedFood.carbs_per_serving,
         fat_per_serving: parsedFood.fat_per_serving,
-        vitamin_a_mcg: parsedFood.micronutrients.vitamin_a_mcg,
-        vitamin_b1_mg: parsedFood.micronutrients.vitamin_b1_mg,
-        vitamin_b2_mg: parsedFood.micronutrients.vitamin_b2_mg,
-        vitamin_b3_mg: parsedFood.micronutrients.vitamin_b3_mg,
-        vitamin_b5_mg: parsedFood.micronutrients.vitamin_b5_mg,
-        vitamin_b6_mg: parsedFood.micronutrients.vitamin_b6_mg,
-        vitamin_b7_mcg: parsedFood.micronutrients.vitamin_b7_mcg,
-        vitamin_b9_mcg: parsedFood.micronutrients.vitamin_b9_mcg,
-        vitamin_b12_mcg: parsedFood.micronutrients.vitamin_b12_mcg,
-        vitamin_c_mg: parsedFood.micronutrients.vitamin_c_mg,
-        vitamin_d_mcg: parsedFood.micronutrients.vitamin_d_mcg,
-        vitamin_e_mg: parsedFood.micronutrients.vitamin_e_mg,
-        vitamin_k_mcg: parsedFood.micronutrients.vitamin_k_mcg,
-        calcium_mg: parsedFood.micronutrients.calcium_mg,
-        iron_mg: parsedFood.micronutrients.iron_mg,
-        magnesium_mg: parsedFood.micronutrients.magnesium_mg,
-        phosphorus_mg: parsedFood.micronutrients.phosphorus_mg,
-        potassium_mg: parsedFood.micronutrients.potassium_mg,
-        sodium_mg: parsedFood.micronutrients.sodium_mg,
-        zinc_mg: parsedFood.micronutrients.zinc_mg,
-        copper_mg: parsedFood.micronutrients.copper_mg,
-        manganese_mg: parsedFood.micronutrients.manganese_mg,
-        selenium_mcg: parsedFood.micronutrients.selenium_mcg,
       })
       .select()
       .single();
@@ -119,7 +97,7 @@ const createLogEntry: RequestHandler = async (req, res) => {
 
     res.json(logEntry);
   } catch (err) {
-    console.error('Error creating log entry:', err);
+    logger.error({ err }, 'Error creating log entry');
     res.status(400).json({ error: err instanceof Error ? err.message : 'Failed to create log entry' });
   }
 };
@@ -165,7 +143,7 @@ const getLogByDate: RequestHandler = async (req, res) => {
       totals,
     });
   } catch (err) {
-    console.error('Error fetching log:', err);
+    logger.error({ err }, 'Error fetching log');
     res.status(400).json({ error: 'Failed to fetch log' });
   }
 };
@@ -195,7 +173,7 @@ const updateLogEntry: RequestHandler = async (req, res) => {
 
     res.json(entry);
   } catch (err) {
-    console.error('Error updating log entry:', err);
+    logger.error({ err }, 'Error updating log entry');
     res.status(400).json({ error: 'Failed to update log entry' });
   }
 };
@@ -219,7 +197,7 @@ const deleteLogEntry: RequestHandler = async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error('Error deleting log entry:', err);
+    logger.error({ err }, 'Error deleting log entry');
     res.status(400).json({ error: 'Failed to delete log entry' });
   }
 };

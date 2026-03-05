@@ -20,4 +20,5 @@ export { ReadyScreen } from './ReadyScreen';
 export { CongratulationsScreen } from './CongratulationsScreen';
 export { StreakCommitScreen } from './StreakCommitScreen';
 export { WhatToExpectScreen } from './WhatToExpectScreen';
+export { CreateAccountScreen } from './CreateAccountScreen';
 export { PaywallScreen } from './PaywallScreen';

@@ -28,7 +28,7 @@ export function LegalModal({ visible, onClose, initialTab = 'privacy' }: Props) 
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+          <TouchableOpacity onPress={onClose} style={styles.closeButton} accessibilityLabel="Close" accessibilityRole="button">
             <Ionicons name="close" size={28} color={colors.text} />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: colors.text }]}>Legal</Text>
@@ -43,6 +43,8 @@ export function LegalModal({ visible, onClose, initialTab = 'privacy' }: Props) 
               activeTab === 'privacy' && { borderBottomColor: colors.primary, borderBottomWidth: 2 },
             ]}
             onPress={() => setActiveTab('privacy')}
+            accessibilityLabel="Privacy policy"
+            accessibilityRole="button"
           >
             <Text
               style={[
@@ -59,6 +61,8 @@ export function LegalModal({ visible, onClose, initialTab = 'privacy' }: Props) 
               activeTab === 'terms' && { borderBottomColor: colors.primary, borderBottomWidth: 2 },
             ]}
             onPress={() => setActiveTab('terms')}
+            accessibilityLabel="Terms of service"
+            accessibilityRole="button"
           >
             <Text
               style={[

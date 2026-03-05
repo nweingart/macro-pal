@@ -106,7 +106,6 @@ export interface ParsedFood {
   protein_per_serving: number;
   carbs_per_serving: number;
   fat_per_serving: number;
-  micronutrients: MicronutrientsPerServing;
 }
 
 export interface FoodForAnalysis {

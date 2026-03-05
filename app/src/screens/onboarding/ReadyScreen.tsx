@@ -10,6 +10,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { OnboardingLayout } from '../../components/OnboardingLayout';
 import { Mascot } from '../../components/Mascot';
+import { useFunnelStep } from '@nedweingart/funnel-kit-react-native';
 
 interface Props {
   onContinue: () => void;
@@ -26,6 +27,7 @@ interface Props {
 }
 
 export function ReadyScreen({ onContinue, targets, firstFood }: Props) {
+  useFunnelStep('Ready');
   const checkScale = useSharedValue(0);
   const contentOpacity = useSharedValue(0);
 

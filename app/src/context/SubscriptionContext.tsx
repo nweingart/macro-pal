@@ -3,9 +3,8 @@ import { Platform } from 'react-native';
 import Purchases, { CustomerInfo, LOG_LEVEL } from 'react-native-purchases';
 import { useAuth } from './AuthContext';
 
-// RevenueCat public API keys (safe for client-side)
-const REVENUECAT_IOS_KEY = 'YOUR_REVENUECAT_IOS_KEY';
-const REVENUECAT_ANDROID_KEY = 'YOUR_REVENUECAT_ANDROID_KEY';
+const REVENUECAT_IOS_KEY = process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY;
+const REVENUECAT_ANDROID_KEY = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY;
 
 interface SubscriptionContextType {
   isSubscribed: boolean;
@@ -29,6 +28,9 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
           Purchases.setLogLevel(LOG_LEVEL.DEBUG);
         }
         const apiKey = Platform.OS === 'ios' ? REVENUECAT_IOS_KEY : REVENUECAT_ANDROID_KEY;
+        if (!apiKey) {
+          throw new Error('RevenueCat API key not configured — set EXPO_PUBLIC_REVENUECAT_IOS_KEY or EXPO_PUBLIC_REVENUECAT_ANDROID_KEY');
+        }
         await Purchases.configure({ apiKey });
         setConfigured(true);
       } catch (err) {
@@ -104,3 +106,6 @@ export function useSubscription() {
   }
   return context;
 }
+
+// Alias for dev mode layer to call through to the real subscription
+export { useSubscription as useRealSubscription };

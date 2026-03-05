@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { OnboardingLayout } from '../../components/OnboardingLayout';
+import { useFunnelStep } from '@nedweingart/funnel-kit-react-native';
 
 interface Props {
   onContinue: (stats: { heightFeet: number; heightInches: number; weight: number }) => void;
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export function BodyStatsScreen({ onContinue, onBack, initialValues }: Props) {
+  useFunnelStep('BodyStats');
   const [heightFeet, setHeightFeet] = useState(initialValues?.heightFeet || '');
   const [heightInches, setHeightInches] = useState(initialValues?.heightInches || '');
   const [weight, setWeight] = useState(initialValues?.weight || '');
@@ -59,6 +61,7 @@ export function BodyStatsScreen({ onContinue, onBack, initialValues }: Props) {
                 placeholder="5"
                 placeholderTextColor="#9CA3AF"
                 maxLength={1}
+                accessibilityLabel="Height in feet"
               />
               <Text style={styles.unit}>ft</Text>
               <TextInput
@@ -69,6 +72,7 @@ export function BodyStatsScreen({ onContinue, onBack, initialValues }: Props) {
                 placeholder="10"
                 placeholderTextColor="#9CA3AF"
                 maxLength={2}
+                accessibilityLabel="Height in inches"
               />
               <Text style={styles.unit}>in</Text>
             </View>
@@ -85,6 +89,7 @@ export function BodyStatsScreen({ onContinue, onBack, initialValues }: Props) {
                 placeholder="170"
                 placeholderTextColor="#9CA3AF"
                 maxLength={5}
+                accessibilityLabel="Weight in pounds"
               />
               <Text style={styles.unit}>lbs</Text>
             </View>

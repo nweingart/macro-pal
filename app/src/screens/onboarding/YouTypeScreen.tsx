@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { OnboardingLayout } from '../../components/OnboardingLayout';
+import { useFunnelStep } from '@nedweingart/funnel-kit-react-native';
 
 interface Props {
   onContinue: () => void;
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export function YouTypeScreen({ onContinue, onBack }: Props) {
+  useFunnelStep('YouType');
   return (
     <OnboardingLayout
       currentStep={4}

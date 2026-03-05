@@ -1,3 +1,5 @@
+export type DayStatus = 'logged' | 'missed' | 'frozen' | 'future';
+
 export interface UserProfile {
   id: string;
   user_id: string;
@@ -12,6 +14,8 @@ export interface UserProfile {
   protein_target_g: number | null;
   carbs_target_g: number | null;
   fat_target_g: number | null;
+  streak_freeze_available: boolean;
+  streak_freeze_used_on: string | null;
   created_at: string;
   updated_at: string;
 }

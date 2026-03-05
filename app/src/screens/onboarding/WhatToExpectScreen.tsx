@@ -7,6 +7,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { OnboardingLayout } from '../../components/OnboardingLayout';
+import { useFunnelStep } from '@nedweingart/funnel-kit-react-native';
 
 interface Props {
   onContinue: () => void;
@@ -32,6 +33,7 @@ const MILESTONES = [
 ];
 
 export function WhatToExpectScreen({ onContinue, onBack }: Props) {
+  useFunnelStep('WhatToExpect');
   const milestoneOpacities = MILESTONES.map(() => useSharedValue(0));
   const milestoneTranslates = MILESTONES.map(() => useSharedValue(20));
 

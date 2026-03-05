@@ -5,8 +5,10 @@ import {
   StyleSheet,
   Animated,
   PanResponder,
+  Pressable,
   TouchableOpacity,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { QuantityStepper } from './QuantityStepper';
 import { MealLogEntry } from '../types';
 import { useTheme } from '../context/ThemeContext';
@@ -15,12 +17,14 @@ interface FoodEntryCardProps {
   entry: MealLogEntry;
   onUpdateServings: (servings: number) => void;
   onDelete: () => void;
+  onPress: () => void;
 }
 
 export function FoodEntryCard({
   entry,
   onUpdateServings,
   onDelete,
+  onPress,
 }: FoodEntryCardProps) {
   const { colors, radius, shadows } = useTheme();
   const translateX = useRef(new Animated.Value(0)).current;
@@ -76,6 +80,8 @@ export function FoodEntryCard({
       <TouchableOpacity
         style={[styles.deleteButton, { backgroundColor: colors.error, borderRadius: radius.md }]}
         onPress={onDelete}
+        accessibilityLabel="Delete food entry"
+        accessibilityRole="button"
       >
         <Text style={[styles.deleteText, { color: colors.white }]}>Delete</Text>
       </TouchableOpacity>
@@ -88,10 +94,13 @@ export function FoodEntryCard({
         ]}
         {...panResponder.panHandlers}
       >
-        <View style={styles.content}>
+        <Pressable onPress={onPress} style={styles.content} accessibilityLabel={`View ${food.name} details`} accessibilityRole="button">
           <View style={styles.header}>
             <Text style={[styles.name, { color: colors.text }]}>{food.name}</Text>
-            <Text style={[styles.calories, { color: colors.text }]}>{totalCalories} kcal</Text>
+            <View style={styles.caloriesRow}>
+              <Text style={[styles.calories, { color: colors.text }]}>{totalCalories} kcal</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+            </View>
           </View>
           <View style={styles.footer}>
             <View style={styles.macros}>
@@ -108,7 +117,7 @@ export function FoodEntryCard({
           <Text style={[styles.servingInfo, { color: colors.textMuted }]}>
             {entry.servings} x {food.serving_unit}
           </Text>
-        </View>
+        </Pressable>
       </Animated.View>
     </View>
   );
@@ -147,6 +156,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     flex: 1,
+  },
+  caloriesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   calories: {
     fontSize: 16,

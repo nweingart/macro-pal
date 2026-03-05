@@ -9,7 +9,11 @@ import {
   MicronutrientAnalysis,
 } from '../types';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
+
+if (!API_URL) {
+  throw new Error('EXPO_PUBLIC_API_URL environment variable is required');
+}
 
 let onUnauthorizedCallback: (() => void) | null = null;
 
@@ -25,6 +29,7 @@ class ApiClient {
   constructor() {
     this.client = axios.create({
       baseURL: API_URL,
+      timeout: 30_000,
       headers: {
         'Content-Type': 'application/json',
       },
@@ -129,6 +134,18 @@ class ApiClient {
   async updateProfile(updates: Partial<UserProfile>): Promise<UserProfile> {
     const response = await this.client.put('/api/profile', updates);
     return response.data;
+  }
+
+  // Streak freeze endpoints
+  async consumeStreakFreeze(date: string): Promise<UserProfile> {
+    return this.updateProfile({
+      streak_freeze_available: false,
+      streak_freeze_used_on: date,
+    });
+  }
+
+  async refillStreakFreeze(): Promise<UserProfile> {
+    return this.updateProfile({ streak_freeze_available: true });
   }
 
   // Tracking endpoints

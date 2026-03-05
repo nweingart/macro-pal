@@ -19,6 +19,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { OnboardingLayout } from '../../components/OnboardingLayout';
+import { useFunnelStep } from '@nedweingart/funnel-kit-react-native';
 
 interface Targets {
   calories: number;
@@ -35,6 +36,7 @@ interface Props {
 }
 
 export function TargetsScreen({ onContinue, onBack, targets, goal }: Props) {
+  useFunnelStep('Targets');
   const [showCustomize, setShowCustomize] = useState(false);
   const [customTargets, setCustomTargets] = useState(targets);
   const [editCalories, setEditCalories] = useState(String(targets.calories));
@@ -143,7 +145,7 @@ export function TargetsScreen({ onContinue, onBack, targets, goal }: Props) {
           </View>
         </Animated.View>
 
-        <TouchableOpacity style={styles.customizeButton} onPress={handleCustomize}>
+        <TouchableOpacity style={styles.customizeButton} onPress={handleCustomize} accessibilityLabel="Customize targets" accessibilityRole="button">
           <Ionicons name="options-outline" size={18} color="#3B82F6" />
           <Text style={styles.customizeText}>Customize targets</Text>
         </TouchableOpacity>
@@ -163,7 +165,7 @@ export function TargetsScreen({ onContinue, onBack, targets, goal }: Props) {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Customize Targets</Text>
-              <TouchableOpacity onPress={() => setShowCustomize(false)}>
+              <TouchableOpacity onPress={() => setShowCustomize(false)} accessibilityLabel="Close" accessibilityRole="button">
                 <Ionicons name="close" size={24} color="#374151" />
               </TouchableOpacity>
             </View>
@@ -178,6 +180,7 @@ export function TargetsScreen({ onContinue, onBack, targets, goal }: Props) {
                     onChangeText={setEditCalories}
                     keyboardType="number-pad"
                     placeholder="2000"
+                    accessibilityLabel="Daily calories"
                   />
                   <Text style={styles.inputUnit}>kcal</Text>
                 </View>
@@ -192,6 +195,7 @@ export function TargetsScreen({ onContinue, onBack, targets, goal }: Props) {
                     onChangeText={setEditProtein}
                     keyboardType="number-pad"
                     placeholder="150"
+                    accessibilityLabel="Protein in grams"
                   />
                   <Text style={styles.inputUnit}>g</Text>
                 </View>
@@ -206,6 +210,7 @@ export function TargetsScreen({ onContinue, onBack, targets, goal }: Props) {
                     onChangeText={setEditCarbs}
                     keyboardType="number-pad"
                     placeholder="200"
+                    accessibilityLabel="Carbs in grams"
                   />
                   <Text style={styles.inputUnit}>g</Text>
                 </View>
@@ -220,12 +225,13 @@ export function TargetsScreen({ onContinue, onBack, targets, goal }: Props) {
                     onChangeText={setEditFat}
                     keyboardType="number-pad"
                     placeholder="65"
+                    accessibilityLabel="Fat in grams"
                   />
                   <Text style={styles.inputUnit}>g</Text>
                 </View>
               </View>
 
-              <TouchableOpacity style={styles.saveButton} onPress={handleSaveCustom}>
+              <TouchableOpacity style={styles.saveButton} onPress={handleSaveCustom} accessibilityLabel="Save changes" accessibilityRole="button">
                 <Text style={styles.saveButtonText}>Save Changes</Text>
               </TouchableOpacity>
             </ScrollView>

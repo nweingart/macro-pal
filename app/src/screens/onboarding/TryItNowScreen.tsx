@@ -11,8 +11,9 @@ import { Ionicons } from '@expo/vector-icons';
 import {
   ExpoSpeechRecognitionModule,
   useSpeechRecognitionEvent,
-} from 'expo-speech-recognition';
+} from '../../utils/speechRecognition';
 import { OnboardingLayout } from '../../components/OnboardingLayout';
+import { useFunnelStep } from '@nedweingart/funnel-kit-react-native';
 
 interface Props {
   onContinue: (input: string) => Promise<void>;
@@ -27,6 +28,7 @@ const SUGGESTIONS = [
 ];
 
 export function TryItNowScreen({ onContinue, onBack }: Props) {
+  useFunnelStep('TryItNow');
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -137,6 +139,7 @@ export function TryItNowScreen({ onContinue, onBack }: Props) {
             placeholderTextColor="#9CA3AF"
             multiline
             autoFocus={!isListening}
+            accessibilityLabel="Describe what you ate"
           />
           <TouchableOpacity
             style={[
@@ -145,6 +148,8 @@ export function TryItNowScreen({ onContinue, onBack }: Props) {
             ]}
             onPress={toggleListening}
             activeOpacity={0.7}
+            accessibilityLabel={isListening ? 'Stop listening' : 'Start voice input'}
+            accessibilityRole="button"
           >
             <Ionicons
               name={isListening ? 'mic' : 'mic-outline'}

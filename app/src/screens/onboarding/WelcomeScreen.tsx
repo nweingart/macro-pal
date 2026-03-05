@@ -1,14 +1,17 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { OnboardingLayout } from '../../components/OnboardingLayout';
 import { Mascot } from '../../components/Mascot';
 import { useTheme } from '../../context/ThemeContext';
+import { useFunnelStep } from '@nedweingart/funnel-kit-react-native';
 
 interface Props {
   onContinue: () => void;
+  onLogin?: () => void;
 }
 
-export function WelcomeScreen({ onContinue }: Props) {
+export function WelcomeScreen({ onContinue, onLogin }: Props) {
+  useFunnelStep('Welcome');
   const { colors } = useTheme();
 
   return (
@@ -34,6 +37,13 @@ export function WelcomeScreen({ onContinue }: Props) {
         <Text style={[styles.cta, { color: colors.primary }]}>
           Let's personalize your experience
         </Text>
+        {onLogin && (
+          <TouchableOpacity style={styles.loginLink} onPress={onLogin} accessibilityLabel="Already have an account? Log in" accessibilityRole="button">
+            <Text style={[styles.loginText, { color: colors.textMuted }]}>
+              Already have an account? <Text style={{ color: colors.primary }}>Log in</Text>
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     </OnboardingLayout>
   );
@@ -73,5 +83,12 @@ const styles = StyleSheet.create({
   cta: {
     fontSize: 15,
     fontWeight: '500',
+  },
+  loginLink: {
+    marginTop: 20,
+    paddingVertical: 8,
+  },
+  loginText: {
+    fontSize: 14,
   },
 });

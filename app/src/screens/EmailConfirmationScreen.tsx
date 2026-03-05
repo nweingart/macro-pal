@@ -77,6 +77,8 @@ export function EmailConfirmationScreen({ email, onBackToLogin }: EmailConfirmat
           ]}
           onPress={handleResendEmail}
           disabled={resending}
+          accessibilityLabel="Resend confirmation email"
+          accessibilityRole="button"
         >
           {resending ? (
             <ActivityIndicator color={colors.white} />
@@ -87,7 +89,7 @@ export function EmailConfirmationScreen({ email, onBackToLogin }: EmailConfirmat
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.backButton} onPress={onBackToLogin}>
+        <TouchableOpacity style={styles.backButton} onPress={onBackToLogin} accessibilityLabel="Back to sign in" accessibilityRole="button">
           <Ionicons name="arrow-back" size={20} color={colors.primary} />
           <Text style={[styles.backButtonText, { color: colors.primary }]}>
             Back to Sign In

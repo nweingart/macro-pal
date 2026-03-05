@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { OnboardingLayout } from '../../components/OnboardingLayout';
+import { useFunnelStep } from '@nedweingart/funnel-kit-react-native';
 
 interface Props {
   onContinue: (challenge: string) => void;
@@ -43,6 +44,7 @@ const CHALLENGES = [
 ];
 
 export function BiggestChallengeScreen({ onContinue, onBack, initialValue }: Props) {
+  useFunnelStep('BiggestChallenge');
   const [selected, setSelected] = useState<string | null>(initialValue || null);
 
   const handleContinue = () => {
@@ -74,6 +76,8 @@ export function BiggestChallengeScreen({ onContinue, onBack, initialValue }: Pro
                 selected === challenge.id && styles.optionCardSelected,
               ]}
               onPress={() => setSelected(challenge.id)}
+              accessibilityLabel={`Select ${challenge.title}`}
+              accessibilityRole="radio"
             >
               <Ionicons name={challenge.icon} size={32} color={selected === challenge.id ? '#1D4ED8' : '#6B7280'} style={styles.optionIcon} />
               <View style={styles.optionContent}>

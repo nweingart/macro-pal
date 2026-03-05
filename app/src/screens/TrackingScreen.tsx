@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   RefreshControl,
+  TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,6 +13,7 @@ import { CalendarView } from '../components/CalendarView';
 import { TrendCard } from '../components/TrendCard';
 import { DailyTotals } from '../components/DailyTotals';
 import { useTheme } from '../context/ThemeContext';
+import { useDevMode } from '../dev/DevModeContext';
 import { api } from '../services/api';
 import { TrackingSummary, MacroTargets } from '../types';
 import { toISODate } from '../utils/date';
@@ -23,28 +25,9 @@ const DEFAULT_TARGETS: MacroTargets = {
   fat: 65,
 };
 
-function getMonthRange(date: Date): { start: string; end: string } {
-  const year = date.getFullYear();
-  const month = date.getMonth();
-  const start = new Date(year, month, 1);
-  const end = new Date(year, month + 1, 0);
-  return {
-    start: toISODate(start),
-    end: toISODate(end),
-  };
-}
+type PeriodTab = 'week' | 'month';
 
-function getWeekRange(): { start: string; end: string } {
-  const today = new Date();
-  const weekAgo = new Date(today);
-  weekAgo.setDate(today.getDate() - 6); // Last 7 days including today
-  return {
-    start: toISODate(weekAgo),
-    end: toISODate(today),
-  };
-}
-
-interface WeeklyStats {
+interface PeriodStats {
   days_logged: number;
   avg_calories: number;
   avg_protein: number;
@@ -52,58 +35,133 @@ interface WeeklyStats {
   avg_fat: number;
 }
 
+function getMonthRange(date: Date): { start: string; end: string } {
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const start = new Date(year, month, 1);
+  const end = new Date(year, month + 1, 0);
+  return { start: toISODate(start), end: toISODate(end) };
+}
+
+function getPrevMonthRange(date: Date): { start: string; end: string } {
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const start = new Date(year, month - 1, 1);
+  const end = new Date(year, month, 0);
+  return { start: toISODate(start), end: toISODate(end) };
+}
+
+function getWeekRange(): { start: string; end: string } {
+  const today = new Date();
+  const weekAgo = new Date(today);
+  weekAgo.setDate(today.getDate() - 6);
+  return { start: toISODate(weekAgo), end: toISODate(today) };
+}
+
+function getPrevWeekRange(): { start: string; end: string } {
+  const today = new Date();
+  const end = new Date(today);
+  end.setDate(today.getDate() - 7);
+  const start = new Date(end);
+  start.setDate(end.getDate() - 6);
+  return { start: toISODate(start), end: toISODate(end) };
+}
+
+function computeStats(dailyData: { calories: number; protein: number; carbs: number; fat: number }[]): PeriodStats | null {
+  const days = dailyData.filter(d => d.calories > 0);
+  if (days.length === 0) return null;
+  return {
+    days_logged: days.length,
+    avg_calories: days.reduce((s, d) => s + d.calories, 0) / days.length,
+    avg_protein: days.reduce((s, d) => s + d.protein, 0) / days.length,
+    avg_carbs: days.reduce((s, d) => s + d.carbs, 0) / days.length,
+    avg_fat: days.reduce((s, d) => s + d.fat, 0) / days.length,
+  };
+}
+
+function pctChange(current: number, previous: number): number | null {
+  if (previous === 0) return null;
+  return ((current - previous) / previous) * 100;
+}
+
 export function TrackingScreen() {
   const { colors, radius, shadows } = useTheme();
+  const dev = useDevMode();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [summary, setSummary] = useState<TrackingSummary | null>(null);
-  const [weeklyStats, setWeeklyStats] = useState<WeeklyStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [markedDates, setMarkedDates] = useState<Set<string>>(new Set());
+  const [periodTab, setPeriodTab] = useState<PeriodTab>('week');
+
+  // Current & previous period stats
+  const [weekStats, setWeekStats] = useState<PeriodStats | null>(null);
+  const [prevWeekStats, setPrevWeekStats] = useState<PeriodStats | null>(null);
+  const [monthStats, setMonthStats] = useState<PeriodStats | null>(null);
+  const [prevMonthStats, setPrevMonthStats] = useState<PeriodStats | null>(null);
 
   const fetchSummary = useCallback(async () => {
-    try {
-      setLoading(true);
-
-      // Fetch monthly data
+    if (dev.enabled) {
+      const { getMockTrackingSummary } = require('../dev/mockData');
       const { start: monthStart, end: monthEnd } = getMonthRange(selectedDate);
-      const monthlyData = await api.getTrackingSummary(monthStart, monthEnd);
+      const monthlyData: TrackingSummary = getMockTrackingSummary(dev.dataPreset, monthStart, monthEnd);
       setSummary(monthlyData);
 
-      // Calculate marked dates from monthly data
       const marked = new Set<string>();
-      monthlyData.daily_data.forEach((day) => {
-        if (day.calories > 0) {
-          marked.add(day.date);
-        }
+      monthlyData.daily_data.forEach((day: TrackingSummary['daily_data'][number]) => {
+        if (day.calories > 0) marked.add(day.date);
       });
       setMarkedDates(marked);
 
-      // Fetch weekly data (last 7 days)
-      const { start: weekStart, end: weekEnd } = getWeekRange();
-      const weeklyData = await api.getTrackingSummary(weekStart, weekEnd);
+      // Week
+      const { start: ws, end: we } = getWeekRange();
+      const { start: pws, end: pwe } = getPrevWeekRange();
+      setWeekStats(computeStats(getMockTrackingSummary(dev.dataPreset, ws, we).daily_data));
+      setPrevWeekStats(computeStats(getMockTrackingSummary(dev.dataPreset, pws, pwe).daily_data));
 
-      // Calculate weekly stats
-      const daysWithData = weeklyData.daily_data.filter(d => d.calories > 0);
-      if (daysWithData.length > 0) {
-        setWeeklyStats({
-          days_logged: daysWithData.length,
-          avg_calories: daysWithData.reduce((sum, d) => sum + d.calories, 0) / daysWithData.length,
-          avg_protein: daysWithData.reduce((sum, d) => sum + d.protein, 0) / daysWithData.length,
-          avg_carbs: daysWithData.reduce((sum, d) => sum + d.carbs, 0) / daysWithData.length,
-          avg_fat: daysWithData.reduce((sum, d) => sum + d.fat, 0) / daysWithData.length,
-        });
-      } else {
-        setWeeklyStats(null);
-      }
+      // Month
+      setMonthStats(computeStats(monthlyData.daily_data));
+      const { start: pms, end: pme } = getPrevMonthRange(selectedDate);
+      setPrevMonthStats(computeStats(getMockTrackingSummary(dev.dataPreset, pms, pme).daily_data));
+
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const { start: monthStart, end: monthEnd } = getMonthRange(selectedDate);
+      const { start: ws, end: we } = getWeekRange();
+      const { start: pws, end: pwe } = getPrevWeekRange();
+      const { start: pms, end: pme } = getPrevMonthRange(selectedDate);
+
+      const [monthlyData, weeklyData, prevWeekData, prevMonthData] = await Promise.all([
+        api.getTrackingSummary(monthStart, monthEnd),
+        api.getTrackingSummary(ws, we),
+        api.getTrackingSummary(pws, pwe),
+        api.getTrackingSummary(pms, pme),
+      ]);
+
+      setSummary(monthlyData);
+
+      const marked = new Set<string>();
+      monthlyData.daily_data.forEach((day) => {
+        if (day.calories > 0) marked.add(day.date);
+      });
+      setMarkedDates(marked);
+
+      setWeekStats(computeStats(weeklyData.daily_data));
+      setPrevWeekStats(computeStats(prevWeekData.daily_data));
+      setMonthStats(computeStats(monthlyData.daily_data));
+      setPrevMonthStats(computeStats(prevMonthData.daily_data));
     } catch (err: any) {
-      // Ignore 401 errors (user logged out or deleted)
       if (err?.response?.status !== 401) {
         console.error('Failed to fetch tracking summary:', err);
       }
     } finally {
       setLoading(false);
     }
-  }, [selectedDate]);
+  }, [selectedDate, dev.enabled, dev.dataPreset]);
 
   useEffect(() => {
     fetchSummary();
@@ -112,10 +170,12 @@ export function TrackingScreen() {
   const selectedDateStr = toISODate(selectedDate);
   const selectedDayData = summary?.daily_data.find((d) => d.date === selectedDateStr);
 
-  // Calculate days with actual data for threshold checks
-  const daysWithMonthlyData = summary?.daily_data.filter(d => d.calories > 0).length ?? 0;
-  const hasEnoughWeeklyData = (weeklyStats?.days_logged ?? 0) >= 7;
-  const hasEnoughMonthlyData = daysWithMonthlyData >= 30;
+  // Pick stats for the active tab
+  const currentStats = periodTab === 'week' ? weekStats : monthStats;
+  const previousStats = periodTab === 'week' ? prevWeekStats : prevMonthStats;
+  const periodLabel = periodTab === 'week' ? 'this week' : 'this month';
+  const minDays = periodTab === 'week' ? 3 : 7;
+  const hasEnoughData = (currentStats?.days_logged ?? 0) >= minDays;
 
   return (
     <ScrollView
@@ -149,99 +209,81 @@ export function TrackingScreen() {
         </View>
       )}
 
-      {/* Weekly Averages */}
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>Weekly Averages</Text>
-      {loading ? (
-        <ActivityIndicator style={styles.loader} color={colors.primary} />
-      ) : hasEnoughWeeklyData && weeklyStats ? (
-        <>
-          <View style={styles.trendRow}>
-            <TrendCard
-              title="Days Logged"
-              value={weeklyStats.days_logged}
-              subtitle="this week"
-              color={colors.primary}
-            />
-            <View style={{ width: 12 }} />
-            <TrendCard
-              title="Avg Calories"
-              value={Math.round(weeklyStats.avg_calories)}
-              subtitle="kcal/day"
-              color={colors.carbs}
-            />
-          </View>
-          <View style={styles.trendRow}>
-            <TrendCard
-              title="Avg Protein"
-              value={`${Math.round(weeklyStats.avg_protein)}g`}
-              color={colors.protein}
-            />
-            <View style={{ width: 12 }} />
-            <TrendCard
-              title="Avg Carbs"
-              value={`${Math.round(weeklyStats.avg_carbs)}g`}
-              color={colors.carbs}
-            />
-            <View style={{ width: 12 }} />
-            <TrendCard
-              title="Avg Fat"
-              value={`${Math.round(weeklyStats.avg_fat)}g`}
-              color={colors.fat}
-            />
-          </View>
-        </>
-      ) : (
-        <View style={[styles.placeholderCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>
-          <Ionicons name="calendar-outline" size={28} color={colors.textMuted} />
-          <View style={styles.placeholderContent}>
-            <Text style={[styles.placeholderTitle, { color: colors.textSecondary }]}>
-              Weekly averages available after 7 days
-            </Text>
-            <Text style={[styles.placeholderText, { color: colors.textMuted }]}>
-              {weeklyStats?.days_logged ?? 0} of 7 days logged this week
-            </Text>
-          </View>
-        </View>
-      )}
+      {/* Period toggle + averages */}
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>Averages</Text>
 
-      {/* Monthly Averages */}
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>Monthly Averages</Text>
+      <View style={[styles.toggle, { backgroundColor: colors.card, borderRadius: radius.md }]}>
+        {(['week', 'month'] as PeriodTab[]).map((tab) => {
+          const active = periodTab === tab;
+          return (
+            <TouchableOpacity
+              key={tab}
+              style={[
+                styles.toggleTab,
+                {
+                  backgroundColor: active ? colors.primary : 'transparent',
+                  borderRadius: radius.sm,
+                },
+              ]}
+              onPress={() => setPeriodTab(tab)}
+              activeOpacity={0.7}
+              accessibilityLabel={tab === 'week' ? 'Show weekly view' : 'Show monthly view'}
+              accessibilityRole="button"
+            >
+              <Text
+                style={[
+                  styles.toggleText,
+                  { color: active ? colors.white : colors.textSecondary },
+                ]}
+              >
+                {tab === 'week' ? 'Week' : 'Month'}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
       {loading ? (
         <ActivityIndicator style={styles.loader} color={colors.primary} />
-      ) : hasEnoughMonthlyData && summary ? (
+      ) : hasEnoughData && currentStats ? (
         <>
           <View style={styles.trendRow}>
             <TrendCard
               title="Days Logged"
-              value={daysWithMonthlyData}
-              subtitle="this month"
+              value={currentStats.days_logged}
+              subtitle={periodLabel}
               color={colors.primary}
+              change={previousStats ? pctChange(currentStats.days_logged, previousStats.days_logged) : null}
             />
-            <View style={{ width: 12 }} />
+            <View style={styles.gap} />
             <TrendCard
               title="Avg Calories"
-              value={Math.round(summary.avg_calories)}
+              value={Math.round(currentStats.avg_calories)}
               subtitle="kcal/day"
-              color={colors.carbs}
+              color={colors.primary}
+              change={previousStats ? pctChange(currentStats.avg_calories, previousStats.avg_calories) : null}
             />
           </View>
           <View style={styles.trendRow}>
             <TrendCard
               title="Avg Protein"
-              value={`${Math.round(summary.avg_protein)}g`}
+              value={`${Math.round(currentStats.avg_protein)}g`}
               color={colors.protein}
+              change={previousStats ? pctChange(currentStats.avg_protein, previousStats.avg_protein) : null}
             />
-            <View style={{ width: 12 }} />
+            <View style={styles.gap} />
             <TrendCard
               title="Avg Carbs"
-              value={`${Math.round(summary.avg_carbs)}g`}
+              value={`${Math.round(currentStats.avg_carbs)}g`}
               color={colors.carbs}
+              change={previousStats ? pctChange(currentStats.avg_carbs, previousStats.avg_carbs) : null}
             />
-            <View style={{ width: 12 }} />
+            <View style={styles.gap} />
             <TrendCard
               title="Avg Fat"
-              value={`${Math.round(summary.avg_fat)}g`}
+              value={`${Math.round(currentStats.avg_fat)}g`}
               color={colors.fat}
+              change={previousStats ? pctChange(currentStats.avg_fat, previousStats.avg_fat) : null}
             />
           </View>
         </>
@@ -250,10 +292,12 @@ export function TrackingScreen() {
           <Ionicons name="trending-up-outline" size={28} color={colors.textMuted} />
           <View style={styles.placeholderContent}>
             <Text style={[styles.placeholderTitle, { color: colors.textSecondary }]}>
-              Monthly averages available after 30 days
+              {periodTab === 'week'
+                ? 'Log at least 3 days this week to see averages'
+                : 'Log at least 7 days this month to see averages'}
             </Text>
             <Text style={[styles.placeholderText, { color: colors.textMuted }]}>
-              {daysWithMonthlyData} of 30 days logged this month
+              {currentStats?.days_logged ?? 0} of {minDays} days logged
             </Text>
           </View>
         </View>
@@ -276,9 +320,26 @@ const styles = StyleSheet.create({
     marginTop: 24,
     marginBottom: 12,
   },
+  toggle: {
+    flexDirection: 'row',
+    padding: 4,
+    marginBottom: 16,
+  },
+  toggleTab: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  toggleText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
   trendRow: {
     flexDirection: 'row',
     marginBottom: 12,
+  },
+  gap: {
+    width: 12,
   },
   noDataCard: {
     padding: 24,

@@ -13,13 +13,12 @@ interface MacroBarProps {
 export function MacroBar({ label, current, target, color, unit = 'g' }: MacroBarProps) {
   const { colors, spacing, radius, typography } = useTheme();
   const percentage = target > 0 ? Math.min((current / target) * 100, 100) : 0;
-  const isOver = current > target;
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
-        <Text style={[styles.value, { color: isOver ? colors.error : colors.textSecondary }]}>
+        <Text style={[styles.value, { color: colors.textSecondary }]}>
           {Math.round(current)}/{target}{unit === 'kcal' ? '' : unit}
         </Text>
       </View>
@@ -29,7 +28,7 @@ export function MacroBar({ label, current, target, color, unit = 'g' }: MacroBar
             styles.barFill,
             {
               width: `${percentage}%`,
-              backgroundColor: isOver ? colors.error : color,
+              backgroundColor: color,
               borderRadius: radius.xs,
             },
           ]}

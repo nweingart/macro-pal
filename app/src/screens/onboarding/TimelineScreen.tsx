@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { OnboardingLayout } from '../../components/OnboardingLayout';
+import { useFunnelStep } from '@nedweingart/funnel-kit-react-native';
 
 interface Props {
   onContinue: (timeline: string) => void;
@@ -37,6 +38,7 @@ const TIMELINES = [
 ];
 
 export function TimelineScreen({ onContinue, onBack, initialValue }: Props) {
+  useFunnelStep('Timeline');
   const [selected, setSelected] = useState<string | null>(initialValue || null);
 
   const handleContinue = () => {
@@ -68,6 +70,8 @@ export function TimelineScreen({ onContinue, onBack, initialValue }: Props) {
                 selected === timeline.id && styles.optionCardSelected,
               ]}
               onPress={() => setSelected(timeline.id)}
+              accessibilityLabel={`Select ${timeline.title}`}
+              accessibilityRole="radio"
             >
               <Ionicons name={timeline.icon} size={32} color={selected === timeline.id ? '#1D4ED8' : '#6B7280'} style={styles.optionIcon} />
               <View style={styles.optionContent}>

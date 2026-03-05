@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { AuthenticatedRequest } from '../types';
 import { calculateTDEE, calculateMacroTargets } from '../services/nutrition';
+import { logger } from '../logger';
 
 const router = Router();
 
@@ -21,6 +22,8 @@ const updateProfileSchema = z.object({
   protein_target_g: z.number().nonnegative().nullable().optional(),
   carbs_target_g: z.number().nonnegative().nullable().optional(),
   fat_target_g: z.number().nonnegative().nullable().optional(),
+  streak_freeze_available: z.boolean().optional(),
+  streak_freeze_used_on: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
 });
 
 // Calculate age from birthday
@@ -59,7 +62,7 @@ const getProfile: RequestHandler = async (req, res) => {
 
     res.json(profile);
   } catch (err) {
-    console.error('Error fetching profile:', err);
+    logger.error({ err }, 'Error fetching profile');
     res.status(400).json({ error: 'Failed to fetch profile' });
   }
 };
@@ -151,7 +154,7 @@ const updateProfile: RequestHandler = async (req, res) => {
 
     res.json(profile);
   } catch (err) {
-    console.error('Error updating profile:', err);
+    logger.error({ err }, 'Error updating profile');
     res.status(400).json({ error: 'Failed to update profile' });
   }
 };
@@ -223,7 +226,7 @@ const getTrackingSummary: RequestHandler = async (req, res) => {
       daily_data: dailyDataArray,
     });
   } catch (err) {
-    console.error('Error fetching tracking summary:', err);
+    logger.error({ err }, 'Error fetching tracking summary');
     res.status(400).json({ error: 'Failed to fetch tracking summary' });
   }
 };
@@ -240,13 +243,13 @@ const deleteAccount: RequestHandler = async (req, res) => {
     });
 
     if (error) {
-      console.error('Error deleting account via RPC:', error);
+      logger.error({ err: error }, 'Error deleting account via RPC');
       throw new Error('Failed to delete account');
     }
 
     res.json({ success: true, message: 'Account deleted successfully' });
   } catch (err) {
-    console.error('Error deleting account:', err);
+    logger.error({ err }, 'Error deleting account');
     res.status(500).json({ error: 'Failed to delete account' });
   }
 };

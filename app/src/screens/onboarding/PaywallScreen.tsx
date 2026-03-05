@@ -4,6 +4,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Purchases, { PurchasesPackage, PURCHASES_ERROR_CODE } from 'react-native-purchases';
 import { OnboardingLayout } from '../../components/OnboardingLayout';
+import { Mascot } from '../../components/Mascot';
+import { colors } from '../../theme/colors';
+import { useDevMode } from '../../dev/DevModeContext';
+import { useFunnelStep } from '@nedweingart/funnel-kit-react-native';
 
 interface Props {
   onSubscribed: () => void;
@@ -11,18 +15,47 @@ interface Props {
   standalone?: boolean;
 }
 
-const FEATURES = [
-  { icon: 'sparkles' as const, label: 'AI-powered food parsing' },
-  { icon: 'person' as const, label: 'Personalized macro targets' },
-  { icon: 'nutrition' as const, label: 'Complete nutrition tracking' },
-  { icon: 'trending-up' as const, label: 'Progress insights & trends' },
+const TIMELINE_STEPS = [
+  {
+    day: 'Today',
+    icon: 'checkmark' as const,
+    circleColor: colors.success,
+    circleFilled: true,
+    title: 'Start your free trial',
+    description: 'Full access to all features',
+  },
+  {
+    day: 'Day 4',
+    icon: 'notifications-outline' as const,
+    circleColor: colors.warning,
+    circleFilled: false,
+    title: "We'll remind you",
+    description: 'Get a notification before your trial ends',
+  },
+  {
+    day: 'Day 5',
+    icon: 'card-outline' as const,
+    circleColor: colors.textMuted,
+    circleFilled: false,
+    title: 'Trial ends',
+    description: 'Choose a plan or cancel — no surprise charges',
+  },
 ];
 
 export function PaywallScreen({ onSubscribed, onBack, standalone = false }: Props) {
+  useFunnelStep('Paywall');
+  const dev = useDevMode();
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'weekly'>('monthly');
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
+
+  // In dev mode with subscription override, skip the paywall entirely
+  useEffect(() => {
+    if (dev.enabled && dev.subscriptionOverride) {
+      onSubscribed();
+    }
+  }, [dev.enabled, dev.subscriptionOverride]);
 
   useEffect(() => {
     fetchOfferings();
@@ -89,56 +122,71 @@ export function PaywallScreen({ onSubscribed, onBack, standalone = false }: Prop
 
   const content = (
     <View style={styles.content}>
-      <Text style={styles.label}>UNLOCK MACRO PAL</Text>
-      <Text style={styles.title}>Start your free trial</Text>
-      <Text style={styles.subtitle}>
-        Get full access to everything Macro Pal has to offer.
-      </Text>
+      {/* Header — Teddy mascot + friendly copy */}
+      <View style={styles.header}>
+        <Mascot size={80} mood="excited" />
+        <Text style={styles.title}>Try Macro Pal Free</Text>
+        <Text style={styles.subtitle}>No payment today. Cancel anytime.</Text>
+      </View>
 
-      <View style={styles.featureList}>
-        {FEATURES.map((feature, index) => (
-          <View key={index} style={styles.featureRow}>
-            <View style={styles.featureIcon}>
-              <Ionicons name={feature.icon} size={18} color="#3B82F6" />
+      {/* Timeline — the centerpiece */}
+      <View style={styles.timeline}>
+        {/* Vertical connector line */}
+        <View style={styles.timelineLine} />
+
+        {TIMELINE_STEPS.map((step, index) => (
+          <View key={step.day} style={[styles.timelineStep, index > 0 && { marginTop: 20 }]}>
+            {/* Circle with icon */}
+            <View
+              style={[
+                styles.timelineCircle,
+                step.circleFilled
+                  ? { backgroundColor: step.circleColor }
+                  : { borderWidth: 2, borderColor: step.circleColor, backgroundColor: colors.white },
+              ]}
+            >
+              <Ionicons
+                name={step.icon}
+                size={16}
+                color={step.circleFilled ? colors.white : step.circleColor}
+              />
             </View>
-            <Text style={styles.featureLabel}>{feature.label}</Text>
+
+            {/* Text */}
+            <View style={styles.timelineText}>
+              <Text style={styles.timelineDay}>{step.day}</Text>
+              <Text style={styles.timelineTitle}>{step.title}</Text>
+              <Text style={styles.timelineDescription}>{step.description}</Text>
+            </View>
           </View>
         ))}
       </View>
 
-      <View style={styles.plans}>
+      {/* Plan selection — compact horizontal chips */}
+      <View style={styles.planChips}>
         <TouchableOpacity
-          style={[styles.planCard, selectedPlan === 'monthly' && styles.planCardSelected]}
+          style={[styles.chip, selectedPlan === 'monthly' && styles.chipSelected]}
           onPress={() => setSelectedPlan('monthly')}
+          accessibilityLabel="Select monthly plan"
+          accessibilityRole="radio"
         >
-          <View style={styles.planBadge}>
-            <Text style={styles.planBadgeText}>BEST VALUE</Text>
-          </View>
-          <View style={styles.planHeader}>
-            <View style={[styles.radio, selectedPlan === 'monthly' && styles.radioSelected]}>
-              {selectedPlan === 'monthly' && <View style={styles.radioInner} />}
-            </View>
-            <Text style={[styles.planTitle, selectedPlan === 'monthly' && styles.planTitleSelected]}>Monthly</Text>
-          </View>
-          <Text style={styles.planPrice}>$7.99/month</Text>
-          <Text style={styles.planUnit}>$0.27/day</Text>
+          <Text style={styles.chipBadge}>Best value</Text>
+          <Text style={[styles.chipLabel, selectedPlan === 'monthly' && styles.chipLabelSelected]}>Monthly</Text>
+          <Text style={[styles.chipPrice, selectedPlan === 'monthly' && styles.chipPriceSelected]}>$7.99/mo</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.planCard, selectedPlan === 'weekly' && styles.planCardSelected]}
+          style={[styles.chip, selectedPlan === 'weekly' && styles.chipSelected]}
           onPress={() => setSelectedPlan('weekly')}
+          accessibilityLabel="Select weekly plan"
+          accessibilityRole="radio"
         >
-          <View style={styles.planHeader}>
-            <View style={[styles.radio, selectedPlan === 'weekly' && styles.radioSelected]}>
-              {selectedPlan === 'weekly' && <View style={styles.radioInner} />}
-            </View>
-            <Text style={[styles.planTitle, selectedPlan === 'weekly' && styles.planTitleSelected]}>Weekly</Text>
-          </View>
-          <Text style={styles.planPrice}>$4.99/week</Text>
-          <Text style={styles.planUnit}>$0.71/day</Text>
+          <Text style={[styles.chipLabel, selectedPlan === 'weekly' && styles.chipLabelSelected]}>Weekly</Text>
+          <Text style={[styles.chipPrice, selectedPlan === 'weekly' && styles.chipPriceSelected]}>$3.99/wk</Text>
         </TouchableOpacity>
       </View>
 
+      {/* Fine print */}
       <Text style={styles.finePrint}>
         5-day free trial, then auto-renews. Cancel anytime.
       </Text>
@@ -151,15 +199,17 @@ export function PaywallScreen({ onSubscribed, onBack, standalone = false }: Prop
         style={[styles.ctaButton, purchasing && styles.ctaButtonDisabled]}
         onPress={handlePurchase}
         disabled={purchasing || loading}
+        accessibilityLabel="Subscribe"
+        accessibilityRole="button"
       >
         {purchasing ? (
           <ActivityIndicator color="#FFFFFF" />
         ) : (
-          <Text style={styles.ctaButtonText}>Start Free Trial</Text>
+          <Text style={styles.ctaButtonText}>Start Free Trial — $0 today</Text>
         )}
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.restoreButton} onPress={handleRestore} disabled={purchasing}>
+      <TouchableOpacity style={styles.restoreButton} onPress={handleRestore} disabled={purchasing} accessibilityLabel="Restore purchases" accessibilityRole="button">
         <Text style={styles.restoreButtonText}>Restore Purchases</Text>
       </TouchableOpacity>
     </View>
@@ -185,12 +235,12 @@ export function PaywallScreen({ onSubscribed, onBack, standalone = false }: Prop
       currentStep={22}
       onContinue={handlePurchase}
       onBack={onBack}
-      continueLabel={purchasing ? 'Processing...' : 'Start Free Trial'}
+      continueLabel={purchasing ? 'Processing...' : 'Start Free Trial — $0 today'}
       continueDisabled={purchasing || loading}
       showProgress={false}
     >
       {content}
-      <TouchableOpacity style={styles.restoreButton} onPress={handleRestore} disabled={purchasing}>
+      <TouchableOpacity style={styles.restoreButton} onPress={handleRestore} disabled={purchasing} accessibilityLabel="Restore purchases" accessibilityRole="button">
         <Text style={styles.restoreButtonText}>Restore Purchases</Text>
       </TouchableOpacity>
     </OnboardingLayout>
@@ -201,131 +251,138 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
-  label: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#F97316',
-    letterSpacing: 1,
-    marginBottom: 8,
+
+  // Header
+  header: {
+    alignItems: 'center',
+    marginBottom: 28,
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#111827',
-    marginBottom: 8,
-    lineHeight: 36,
+    color: colors.text,
+    marginTop: 12,
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
-    color: '#6B7280',
-    marginBottom: 24,
+    color: colors.textMuted,
+    marginTop: 4,
+    textAlign: 'center',
   },
-  featureList: {
-    gap: 12,
-    marginBottom: 24,
+
+  // Timeline
+  timeline: {
+    position: 'relative',
+    marginBottom: 28,
+    paddingLeft: 4,
   },
-  featureRow: {
+  timelineLine: {
+    position: 'absolute',
+    left: 19, // center of the 32px circle (4px paddingLeft + 15px)
+    top: 16,
+    bottom: 16,
+    width: 2,
+    backgroundColor: colors.border,
+  },
+  timelineStep: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
-  featureIcon: {
+  timelineCircle: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#EFF6FF',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    zIndex: 1,
   },
-  featureLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#111827',
+  timelineText: {
+    marginLeft: 14,
+    flex: 1,
+    paddingTop: 2,
   },
-  plans: {
-    gap: 12,
+  timelineDay: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 1,
+  },
+  timelineTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text,
+    lineHeight: 20,
+  },
+  timelineDescription: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    lineHeight: 19,
+  },
+
+  // Plan chips
+  planChips: {
+    flexDirection: 'row',
+    gap: 10,
     marginBottom: 16,
   },
-  planCard: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    padding: 16,
+  chip: {
+    flex: 1,
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    alignItems: 'center',
   },
-  planCardSelected: {
+  chipSelected: {
+    borderColor: colors.info,
     backgroundColor: '#EFF6FF',
-    borderColor: '#3B82F6',
   },
-  planBadge: {
-    backgroundColor: '#F97316',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 4,
-    alignSelf: 'flex-start',
-    marginBottom: 8,
-  },
-  planBadgeText: {
+  chipBadge: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.info,
+    textTransform: 'uppercase',
     letterSpacing: 0.5,
+    marginBottom: 2,
   },
-  planHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  planTitle: {
-    fontSize: 17,
+  chipLabel: {
+    fontSize: 15,
     fontWeight: '600',
-    color: '#111827',
+    color: colors.text,
   },
-  planTitleSelected: {
-    color: '#1D4ED8',
+  chipLabelSelected: {
+    color: colors.info,
   },
-  planPrice: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#111827',
-    marginLeft: 36,
-  },
-  planUnit: {
+  chipPrice: {
     fontSize: 14,
-    color: '#6B7280',
-    marginLeft: 36,
+    fontWeight: '500',
+    color: colors.textSecondary,
+    marginTop: 1,
   },
-  radio: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#D1D5DB',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
+  chipPriceSelected: {
+    color: colors.info,
   },
-  radioSelected: {
-    borderColor: '#3B82F6',
-  },
-  radioInner: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#3B82F6',
-  },
+
+  // Fine print
   finePrint: {
     fontSize: 13,
-    color: '#9CA3AF',
+    color: colors.textMuted,
     textAlign: 'center',
     marginBottom: 8,
   },
+
+  // Footer / CTA
   footer: {
     paddingHorizontal: 24,
     paddingBottom: 32,
   },
   ctaButton: {
-    backgroundColor: '#F97316',
+    backgroundColor: colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -345,12 +402,14 @@ const styles = StyleSheet.create({
   },
   restoreButtonText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.textSecondary,
     textDecorationLine: 'underline',
   },
+
+  // Standalone layout
   standaloneContainer: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FAF9F6',
   },
   standaloneScroll: {
     flex: 1,

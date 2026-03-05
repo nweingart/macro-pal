@@ -1,13 +1,22 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
 import { Food } from '../types';
+import { useDevMode } from '../dev/DevModeContext';
 
 export function useFoodLibrary() {
+  const dev = useDevMode();
   const [foods, setFoods] = useState<Food[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchFoods = useCallback(async () => {
+    if (dev.enabled) {
+      const { foodsByPreset } = require('../dev/mockData');
+      setFoods([...foodsByPreset[dev.dataPreset]]);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -20,13 +29,15 @@ export function useFoodLibrary() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [dev.enabled, dev.dataPreset]);
 
   useEffect(() => {
     fetchFoods();
   }, [fetchFoods]);
 
   const updateFood = async (id: string, updates: Partial<Food>): Promise<boolean> => {
+    if (dev.enabled) return true;
+
     try {
       setError(null);
       await api.updateFood(id, updates);
@@ -41,6 +52,11 @@ export function useFoodLibrary() {
   };
 
   const deleteFood = async (id: string): Promise<boolean> => {
+    if (dev.enabled) {
+      setFoods((prev) => prev.filter((f) => f.id !== id));
+      return true;
+    }
+
     try {
       setError(null);
       await api.deleteFood(id);

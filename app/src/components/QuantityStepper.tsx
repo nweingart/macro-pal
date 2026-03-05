@@ -30,6 +30,8 @@ export function QuantityStepper({
         ]}
         onPress={onDecrement}
         disabled={!canDecrement}
+        accessibilityLabel="Decrease servings"
+        accessibilityRole="button"
       >
         <Text style={[styles.buttonText, { color: canDecrement ? colors.text : colors.textMuted }]}>
           -
@@ -39,6 +41,8 @@ export function QuantityStepper({
       <TouchableOpacity
         style={[styles.button, { backgroundColor: colors.white, borderRadius: 6 }, shadows.small]}
         onPress={onIncrement}
+        accessibilityLabel="Increase servings"
+        accessibilityRole="button"
       >
         <Text style={[styles.buttonText, { color: colors.text }]}>+</Text>
       </TouchableOpacity>

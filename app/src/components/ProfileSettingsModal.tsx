@@ -171,7 +171,7 @@ export function ProfileSettingsModal({ visible, onClose }: Props) {
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+          <TouchableOpacity onPress={onClose} style={styles.closeButton} accessibilityLabel="Close" accessibilityRole="button">
             <Ionicons name="close" size={28} color={colors.text} />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: colors.text }]}>Profile Settings</Text>
@@ -210,6 +210,8 @@ export function ProfileSettingsModal({ visible, onClose }: Props) {
                       },
                     ]}
                     onPress={() => setGender(g.value)}
+                    accessibilityLabel={`Select ${g.label}`}
+                    accessibilityRole="radio"
                   >
                     <Text
                       style={[
@@ -233,6 +235,7 @@ export function ProfileSettingsModal({ visible, onClose }: Props) {
                   keyboardType="numeric"
                   placeholder="30"
                   placeholderTextColor={colors.textMuted}
+                  accessibilityLabel="Age in years"
                 />
                 <Text style={[styles.inputUnit, { color: colors.textSecondary }]}>years</Text>
               </View>
@@ -247,6 +250,7 @@ export function ProfileSettingsModal({ visible, onClose }: Props) {
                   keyboardType="numeric"
                   placeholder="5"
                   placeholderTextColor={colors.textMuted}
+                  accessibilityLabel="Height in feet"
                 />
                 <Text style={[styles.inputUnit, { color: colors.textSecondary }]}>ft</Text>
                 <TextInput
@@ -256,6 +260,7 @@ export function ProfileSettingsModal({ visible, onClose }: Props) {
                   keyboardType="numeric"
                   placeholder="10"
                   placeholderTextColor={colors.textMuted}
+                  accessibilityLabel="Height in inches"
                 />
                 <Text style={[styles.inputUnit, { color: colors.textSecondary }]}>in</Text>
               </View>
@@ -270,6 +275,7 @@ export function ProfileSettingsModal({ visible, onClose }: Props) {
                   keyboardType="numeric"
                   placeholder="170"
                   placeholderTextColor={colors.textMuted}
+                  accessibilityLabel="Weight in pounds"
                 />
                 <Text style={[styles.inputUnit, { color: colors.textSecondary }]}>lbs</Text>
               </View>
@@ -292,6 +298,8 @@ export function ProfileSettingsModal({ visible, onClose }: Props) {
                       },
                     ]}
                     onPress={() => setActivityLevel(level.value)}
+                    accessibilityLabel={`Select ${level.label} activity level`}
+                    accessibilityRole="radio"
                   >
                     <View style={styles.optionRowContent}>
                       <Text
@@ -327,6 +335,8 @@ export function ProfileSettingsModal({ visible, onClose }: Props) {
                       },
                     ]}
                     onPress={() => setDietPlan(plan.value)}
+                    accessibilityLabel={`Select ${plan.label}`}
+                    accessibilityRole="radio"
                   >
                     <Text
                       style={[
@@ -349,6 +359,8 @@ export function ProfileSettingsModal({ visible, onClose }: Props) {
               ]}
               onPress={handleSave}
               disabled={saving}
+              accessibilityLabel="Save changes"
+              accessibilityRole="button"
             >
               {saving ? (
                 <ActivityIndicator color={colors.white} />
@@ -362,6 +374,8 @@ export function ProfileSettingsModal({ visible, onClose }: Props) {
               <TouchableOpacity
                 style={styles.legalRow}
                 onPress={() => { setLegalTab('privacy'); setLegalVisible(true); }}
+                accessibilityLabel="View privacy policy"
+                accessibilityRole="button"
               >
                 <Ionicons name="shield-checkmark-outline" size={20} color={colors.textSecondary} />
                 <Text style={[styles.legalRowText, { color: colors.textSecondary }]}>Privacy Policy</Text>
@@ -370,6 +384,8 @@ export function ProfileSettingsModal({ visible, onClose }: Props) {
               <TouchableOpacity
                 style={styles.legalRow}
                 onPress={() => { setLegalTab('terms'); setLegalVisible(true); }}
+                accessibilityLabel="View terms of service"
+                accessibilityRole="button"
               >
                 <Ionicons name="document-text-outline" size={20} color={colors.textSecondary} />
                 <Text style={[styles.legalRowText, { color: colors.textSecondary }]}>Terms of Service</Text>
@@ -378,13 +394,13 @@ export function ProfileSettingsModal({ visible, onClose }: Props) {
             </View>
 
             {/* Sign Out */}
-            <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+            <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut} accessibilityLabel="Sign out" accessibilityRole="button">
               <Ionicons name="log-out-outline" size={20} color={colors.error} />
               <Text style={[styles.signOutText, { color: colors.error }]}>Sign Out</Text>
             </TouchableOpacity>
 
             {/* Delete Account */}
-            <TouchableOpacity style={styles.deleteAccountButton} onPress={handleDeleteAccount}>
+            <TouchableOpacity style={styles.deleteAccountButton} onPress={handleDeleteAccount} accessibilityLabel="Delete account" accessibilityRole="button">
               <Text style={[styles.deleteAccountText, { color: colors.textMuted }]}>
                 Delete Account
               </Text>

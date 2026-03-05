@@ -1,8 +1,10 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
+import * as Sentry from '@sentry/react-native';
 import { supabase } from '../services/supabase';
 import { setOnUnauthorized } from '../services/api';
 import { logger } from '../utils/logger';
+import { analytics } from '../utils/analytics';
 
 interface AuthContextType {
   user: User | null;
@@ -47,7 +49,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log('[AuthContext] onAuthStateChange event:', event, 'session:', session?.user?.id || null);
         logger.info('Auth', 'Auth state changed', {
           event,
           hasSession: !!session,
@@ -56,6 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
         setSession(session);
         setUser(session?.user ?? null);
+        Sentry.setUser(session?.user ? { id: session.user.id, email: session.user.email } : null);
       }
     );
 
@@ -87,13 +89,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
 
         // User created but needs email confirmation
-        // TODO: Re-enable for production
-        // if (data.user && !data.session) {
-        //   logger.info('Auth', 'Email confirmation required');
-        //   setPendingConfirmationEmail(email);
-        //   return { error: null, needsConfirmation: true };
-        // }
+        if (data.user && !data.session) {
+          logger.info('Auth', 'Email confirmation required');
+          setPendingConfirmationEmail(email);
+          return { error: null, needsConfirmation: true };
+        }
 
+        analytics.signUp();
+        if (data.user) analytics.identify(data.user.id);
         return { error: null, needsConfirmation: false };
       }
     } catch (e) {
@@ -121,6 +124,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: data.user?.email,
           hasSession: !!data.session,
         });
+        analytics.signIn();
+        if (data.user) analytics.identify(data.user.id);
       }
       return { error: error as Error | null };
     } catch (e) {
@@ -181,6 +186,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Clear local state FIRST to immediately prevent API calls from other components
     setUser(null);
     setSession(null);
+    Sentry.setUser(null);
 
     // Then sign out from Supabase (may fail if user already deleted, that's fine)
     try {
@@ -227,3 +233,6 @@ export function useAuth() {
   }
   return context;
 }
+
+// Alias for dev mode layer to call through to the real auth
+export { useAuth as useRealAuth };

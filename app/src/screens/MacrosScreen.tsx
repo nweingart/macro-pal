@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../hooks/useToast';
 import { useAuth } from '../hooks/useAuth';
+import { useDevMode } from '../dev/DevModeContext';
 import { api } from '../services/api';
 import { ProfileSettingsModal } from '../components/ProfileSettingsModal';
 import {
@@ -41,6 +42,7 @@ export function MacrosScreen() {
   const { colors, radius } = useTheme();
   const toast = useToast();
   const { user } = useAuth();
+  const dev = useDevMode();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -63,6 +65,20 @@ export function MacrosScreen() {
   });
 
   const loadProfile = useCallback(async () => {
+    if (dev.enabled) {
+      const { mockProfile, mockUserProfile } = require('../dev/mockData');
+      setCalorieTarget(String(mockProfile.calorie_target));
+      setLockedMacros({
+        protein: mockProfile.protein_target_g,
+        carbs: null,
+        fat: null,
+      });
+      setEditingMacro('protein');
+      setUserProfile(mockUserProfile);
+      setLoading(false);
+      return;
+    }
+
     // Don't make API calls if user is logged out (e.g., after account deletion)
     if (!user) {
       setLoading(false);
@@ -97,7 +113,7 @@ export function MacrosScreen() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, dev.enabled]);
 
   useEffect(() => {
     loadProfile();
@@ -191,11 +207,17 @@ export function MacrosScreen() {
   const canSave = validation.overall.level !== 'danger';
 
   const handleSave = async () => {
-    if (!user) return;
     if (!canSave) {
       toast.error('Please fix the dangerous values before saving');
       return;
     }
+
+    if (dev.enabled) {
+      toast.success('Macro targets saved! (dev mode)');
+      return;
+    }
+
+    if (!user) return;
 
     try {
       setSaving(true);
@@ -359,6 +381,8 @@ export function MacrosScreen() {
         ]}
         onPress={() => handleMacroPress(macro)}
         activeOpacity={0.7}
+        accessibilityLabel={`Adjust ${macro} target`}
+        accessibilityRole="button"
       >
         <View style={styles.macroHeader}>
           <Text style={[styles.macroLabel, { color: macroIsLocked ? color : colors.textSecondary }]}>
@@ -386,6 +410,7 @@ export function MacrosScreen() {
             selectTextOnFocus
             autoFocus
             maxLength={4}
+            accessibilityLabel={`${macro} target in grams`}
           />
         ) : (
           <Text style={[styles.macroValue, { color: colors.text }]}>{value}</Text>
@@ -399,14 +424,14 @@ export function MacrosScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.loadingContainer, { backgroundColor: colors.background }]} edges={['top']}>
+      <SafeAreaView style={[styles.loadingContainer, { backgroundColor: colors.background }]} edges={[]}>
         <ActivityIndicator size="large" color={colors.primary} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -415,20 +440,6 @@ export function MacrosScreen() {
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Header */}
-          <View style={styles.header}>
-            <View>
-              <Text style={[styles.greeting, { color: colors.textSecondary }]}>Daily Targets</Text>
-              <Text style={[styles.title, { color: colors.text }]}>Your Macros</Text>
-            </View>
-            <TouchableOpacity
-              style={[styles.settingsButton, { backgroundColor: colors.card, borderRadius: radius.sm }]}
-              onPress={() => setShowProfileModal(true)}
-            >
-              <Ionicons name="person-circle-outline" size={28} color={colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
-
           {/* Calorie Target */}
           <View style={[styles.calorieCard, { backgroundColor: colors.primary, borderRadius: radius.lg }]}>
             <Text style={styles.calorieLabel}>Daily Calories</Text>
@@ -442,6 +453,7 @@ export function MacrosScreen() {
                 placeholderTextColor="rgba(255,255,255,0.5)"
                 selectTextOnFocus
                 maxLength={5}
+                accessibilityLabel="Daily calorie target"
               />
               <Text style={styles.calorieUnit}>kcal</Text>
             </View>
@@ -452,6 +464,8 @@ export function MacrosScreen() {
             <TouchableOpacity
               style={[styles.warningBox, { backgroundColor: colors.warning + '20', borderRadius: radius.md }]}
               onPress={() => setShowProfileModal(true)}
+              accessibilityLabel="Complete your profile"
+              accessibilityRole="button"
             >
               <Ionicons name="person-outline" size={20} color={colors.warning} />
               <View style={styles.warningContent}>
@@ -476,9 +490,9 @@ export function MacrosScreen() {
 
           {/* Macro Cards - Inline rendering to prevent re-mount */}
           <View style={styles.macrosGrid}>
-            {renderMacroCard('protein', 'Protein', '#3B82F6')}
-            {renderMacroCard('carbs', 'Carbs', '#F59E0B')}
-            {renderMacroCard('fat', 'Fat', '#10B981')}
+            {renderMacroCard('protein', 'Protein', colors.protein)}
+            {renderMacroCard('carbs', 'Carbs', colors.carbs)}
+            {renderMacroCard('fat', 'Fat', colors.fat)}
           </View>
 
           {/* Summary */}
@@ -548,6 +562,8 @@ export function MacrosScreen() {
                     <TouchableOpacity
                       style={[styles.fixButton, { backgroundColor: colors.primary, borderRadius: radius.sm }]}
                       onPress={() => handleApplyFix(fix)}
+                      accessibilityLabel="Apply suggested protein value"
+                      accessibilityRole="button"
                     >
                       <Ionicons name="flash" size={14} color={colors.white} />
                       <Text style={[styles.fixButtonText, { color: colors.white }]}>{fix.label}</Text>
@@ -585,6 +601,8 @@ export function MacrosScreen() {
                     <TouchableOpacity
                       style={[styles.fixButton, { backgroundColor: colors.primary, borderRadius: radius.sm }]}
                       onPress={() => handleApplyFix(fix)}
+                      accessibilityLabel="Apply suggested carbs value"
+                      accessibilityRole="button"
                     >
                       <Ionicons name="flash" size={14} color={colors.white} />
                       <Text style={[styles.fixButtonText, { color: colors.white }]}>{fix.label}</Text>
@@ -622,6 +640,8 @@ export function MacrosScreen() {
                     <TouchableOpacity
                       style={[styles.fixButton, { backgroundColor: colors.primary, borderRadius: radius.sm }]}
                       onPress={() => handleApplyFix(fix)}
+                      accessibilityLabel="Apply suggested fat value"
+                      accessibilityRole="button"
                     >
                       <Ionicons name="flash" size={14} color={colors.white} />
                       <Text style={[styles.fixButtonText, { color: colors.white }]}>{fix.label}</Text>
@@ -647,6 +667,8 @@ export function MacrosScreen() {
             ]}
             onPress={handleSave}
             disabled={saving || !canSave}
+            accessibilityLabel="Save macro targets"
+            accessibilityRole="button"
           >
             {saving ? (
               <ActivityIndicator color={colors.white} />
@@ -687,23 +709,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  greeting: {
-    fontSize: 14,
-    marginBottom: 2,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-  },
-  settingsButton: {
-    padding: 8,
   },
   calorieCard: {
     padding: 24,

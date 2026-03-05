@@ -10,6 +10,7 @@ import Animated, {
 import { Ionicons } from '@expo/vector-icons';
 import { OnboardingLayout } from '../../components/OnboardingLayout';
 import { Mascot } from '../../components/Mascot';
+import { useFunnelStep } from '@nedweingart/funnel-kit-react-native';
 
 interface Props {
   onContinue: () => void;
@@ -22,6 +23,7 @@ const STATS = [
 ];
 
 export function CongratulationsScreen({ onContinue, firstFood }: Props) {
+  useFunnelStep('Congratulations');
   const mascotScale = useSharedValue(0);
   const card1Opacity = useSharedValue(0);
   const card1Scale = useSharedValue(0.8);

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal } from 'rea
 import { Ionicons } from '@expo/vector-icons';
 import { OnboardingLayout } from '../../components/OnboardingLayout';
 import { toISODateFromParts } from '../../utils/date';
+import { useFunnelStep } from '@nedweingart/funnel-kit-react-native';
 
 interface Props {
   onContinue: (birthday: string) => void;
@@ -43,11 +44,11 @@ interface PickerModalProps {
 function PickerModal({ visible, onClose, onSelect, options, title, selectedValue }: PickerModalProps) {
   return (
     <Modal visible={visible} transparent animationType="slide">
-      <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose}>
+      <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose} accessibilityLabel="Close" accessibilityRole="button">
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>{title}</Text>
-            <TouchableOpacity onPress={onClose}>
+            <TouchableOpacity onPress={onClose} accessibilityLabel="Close" accessibilityRole="button">
               <Ionicons name="close" size={24} color="#374151" />
             </TouchableOpacity>
           </View>
@@ -63,6 +64,8 @@ function PickerModal({ visible, onClose, onSelect, options, title, selectedValue
                   onSelect(option.value);
                   onClose();
                 }}
+                accessibilityLabel={option.label}
+                accessibilityRole="radio"
               >
                 <Text
                   style={[
@@ -85,6 +88,7 @@ function PickerModal({ visible, onClose, onSelect, options, title, selectedValue
 }
 
 export function BirthdayScreen({ onContinue, onBack, initialValue }: Props) {
+  useFunnelStep('Birthday');
   const currentYear = new Date().getFullYear();
   const defaultYear = currentYear - 30;
 
@@ -159,6 +163,8 @@ export function BirthdayScreen({ onContinue, onBack, initialValue }: Props) {
           <TouchableOpacity
             style={[styles.pickerButton, styles.pickerButtonMonth]}
             onPress={() => setShowMonthPicker(true)}
+            accessibilityLabel="Select birth month"
+            accessibilityRole="button"
           >
             <Text style={[styles.pickerButtonText, month === null && styles.pickerPlaceholder]}>
               {month !== null ? MONTHS[month] : 'Month'}
@@ -170,6 +176,8 @@ export function BirthdayScreen({ onContinue, onBack, initialValue }: Props) {
           <TouchableOpacity
             style={[styles.pickerButton, styles.pickerButtonDay]}
             onPress={() => setShowDayPicker(true)}
+            accessibilityLabel="Select birth day"
+            accessibilityRole="button"
           >
             <Text style={[styles.pickerButtonText, day === null && styles.pickerPlaceholder]}>
               {day !== null ? String(day) : 'Day'}
@@ -181,6 +189,8 @@ export function BirthdayScreen({ onContinue, onBack, initialValue }: Props) {
           <TouchableOpacity
             style={[styles.pickerButton, styles.pickerButtonYear]}
             onPress={() => setShowYearPicker(true)}
+            accessibilityLabel="Select birth year"
+            accessibilityRole="button"
           >
             <Text style={[styles.pickerButtonText, year === null && styles.pickerPlaceholder]}>
               {year !== null ? String(year) : 'Year'}

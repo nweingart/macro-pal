@@ -40,7 +40,8 @@
     "plugins": [
       "expo-speech-recognition",
       "expo-web-browser",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "@sentry/react-native"
     ],
     "extra": {
       "eas": {

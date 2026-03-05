@@ -2,8 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ActivityIndicator, View } from 'react-native';
+import { FunnelProvider } from '@nedweingart/funnel-kit-react-native';
 
 import { useAuth } from '../hooks/useAuth';
+import { LoginScreen } from '../screens/LoginScreen';
 import {
   WelcomeScreen,
   ProblemScreen,
@@ -26,9 +28,11 @@ import {
   CongratulationsScreen,
   StreakCommitScreen,
   WhatToExpectScreen,
+  CreateAccountScreen,
   PaywallScreen,
 } from '../screens/onboarding';
 import { api } from '../services/api';
+import { analytics } from '../utils/analytics';
 
 const Stack = createNativeStackNavigator();
 
@@ -58,6 +62,7 @@ const SCREEN_ORDER = [
   'Congratulations',
   'StreakCommit',
   'WhatToExpect',
+  'CreateAccount',
   'Paywall',
 ];
 
@@ -165,29 +170,44 @@ function calculateTargets(
 
 interface OnboardingNavigatorProps {
   onComplete: () => void;
+  onEnter?: () => void;
 }
 
-export function OnboardingNavigator({ onComplete }: OnboardingNavigatorProps) {
+export function OnboardingNavigator({ onComplete, onEnter }: OnboardingNavigatorProps) {
   const { user } = useAuth();
+  const userRef = useRef(user);
+  userRef.current = user; // Always keep the latest user in the ref
   const [data, setData] = useState<Partial<OnboardingData>>({});
   const [initialScreen, setInitialScreen] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const currentScreenRef = useRef<string>('Welcome');
 
-  const getStorageKey = () => user ? `onboarding_progress_${user.id}` : null;
+  const getStorageKey = () => user ? `onboarding_progress_${user.id}` : 'onboarding_progress_anon';
+
+  // Tell AppNavigator we're in the onboarding flow
+  useEffect(() => {
+    onEnter?.();
+  }, []);
 
   // Load saved progress on mount
   useEffect(() => {
     const loadProgress = async () => {
       const key = getStorageKey();
-      if (!key) {
-        setInitialScreen('Welcome');
-        setIsLoading(false);
-        return;
-      }
 
       try {
-        const saved = await AsyncStorage.getItem(key);
+        let saved = await AsyncStorage.getItem(key);
+
+        // If user just authenticated, migrate anonymous progress
+        if (!saved && user) {
+          const anonSaved = await AsyncStorage.getItem('onboarding_progress_anon');
+          if (anonSaved) {
+            saved = anonSaved;
+            // Migrate to user-specific key and clean up
+            await AsyncStorage.setItem(key, anonSaved);
+            await AsyncStorage.removeItem('onboarding_progress_anon');
+          }
+        }
+
         if (saved) {
           const progress: SavedProgress = JSON.parse(saved);
           // Handle migration from old screen name
@@ -254,6 +274,12 @@ export function OnboardingNavigator({ onComplete }: OnboardingNavigatorProps) {
   };
 
   const saveProfile = async () => {
+    const currentUser = userRef.current;
+    if (!currentUser) {
+      if (__DEV__) console.warn('saveProfile called without a user — skipping API call');
+      return;
+    }
+
     try {
       const heightInches = (data.heightFeet || 0) * 12 + (data.heightInches || 0);
 
@@ -276,9 +302,9 @@ export function OnboardingNavigator({ onComplete }: OnboardingNavigatorProps) {
     // Clear progress and mark onboarding complete in AsyncStorage
     // (but do NOT call onComplete — that happens after subscription)
     await clearProgress();
-    if (user) {
-      await AsyncStorage.setItem(`onboarding_complete_${user.id}`, 'true');
-    }
+    await AsyncStorage.removeItem('onboarding_progress_anon');
+    await AsyncStorage.setItem(`onboarding_complete_${currentUser.id}`, 'true');
+    analytics.onboardingComplete();
   };
 
   if (isLoading || !initialScreen) {
@@ -290,6 +316,12 @@ export function OnboardingNavigator({ onComplete }: OnboardingNavigatorProps) {
   }
 
   return (
+    <FunnelProvider
+      apiKey={process.env.EXPO_PUBLIC_FK_API_KEY || ''}
+      funnelId="onboarding"
+      stepOrder={SCREEN_ORDER}
+      endpoint={process.env.EXPO_PUBLIC_FK_API_URL}
+    >
     <Stack.Navigator
       initialRouteName={initialScreen}
       screenOptions={{
@@ -301,9 +333,23 @@ export function OnboardingNavigator({ onComplete }: OnboardingNavigatorProps) {
         {({ navigation }) => (
           <WelcomeScreen
             onContinue={() => navigateAndSave(navigation, 'Problem')}
+            onLogin={() => navigation.navigate('Login')}
           />
         )}
       </Stack.Screen>
+
+      <Stack.Screen
+        name="Login"
+        component={LoginScreen}
+        options={{
+          headerShown: true,
+          headerTitle: '',
+          headerBackTitle: '',
+          headerShadowVisible: false,
+          headerStyle: { backgroundColor: '#FAF9F6' },
+          animation: 'slide_from_right',
+        }}
+      />
 
       <Stack.Screen name="Problem">
         {({ navigation }) => (
@@ -504,9 +550,9 @@ export function OnboardingNavigator({ onComplete }: OnboardingNavigatorProps) {
           <ReadyScreen
             targets={data.targets || { calories: 2000, protein: 150, carbs: 200, fat: 65 }}
             firstFood={data.firstFood}
-            onContinue={async () => {
-              await saveProfile();
-              navigation.navigate('Congratulations');
+            onContinue={() => {
+              // Profile is saved later in CreateAccount after authentication
+              navigateAndSave(navigation, 'Congratulations');
             }}
           />
         )}
@@ -533,7 +579,21 @@ export function OnboardingNavigator({ onComplete }: OnboardingNavigatorProps) {
       <Stack.Screen name="WhatToExpect">
         {({ navigation }) => (
           <WhatToExpectScreen
-            onContinue={() => navigation.navigate('Paywall')}
+            onContinue={() => navigateAndSave(navigation, 'CreateAccount')}
+            onBack={() => navigation.goBack()}
+          />
+        )}
+      </Stack.Screen>
+
+      <Stack.Screen name="CreateAccount">
+        {({ navigation }) => (
+          <CreateAccountScreen
+            onAccountCreated={async () => {
+              // Brief yield so useAuth re-renders with the new user before we call saveProfile
+              await new Promise((r) => setTimeout(r, 100));
+              await saveProfile();
+              navigateAndSave(navigation, 'Paywall');
+            }}
             onBack={() => navigation.goBack()}
           />
         )}
@@ -548,5 +608,6 @@ export function OnboardingNavigator({ onComplete }: OnboardingNavigatorProps) {
         )}
       </Stack.Screen>
     </Stack.Navigator>
+    </FunnelProvider>
   );
 }

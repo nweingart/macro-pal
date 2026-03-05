@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { OnboardingLayout } from '../../components/OnboardingLayout';
+import { useFunnelStep } from '@nedweingart/funnel-kit-react-native';
 
 interface Props {
   onContinue: (goal: string) => void;
@@ -31,6 +32,7 @@ const GOALS = [
 ];
 
 export function GoalScreen({ onContinue, onBack, initialValue }: Props) {
+  useFunnelStep('Goal');
   const [selected, setSelected] = useState<string | null>(initialValue || null);
 
   const handleContinue = () => {
@@ -62,6 +64,8 @@ export function GoalScreen({ onContinue, onBack, initialValue }: Props) {
                 selected === goal.id && styles.optionCardSelected,
               ]}
               onPress={() => setSelected(goal.id)}
+              accessibilityLabel={`Select ${goal.title}`}
+              accessibilityRole="radio"
             >
               <Ionicons name={goal.icon} size={32} color={selected === goal.id ? '#1D4ED8' : '#6B7280'} style={styles.optionIcon} />
               <View style={styles.optionContent}>

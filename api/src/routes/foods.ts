@@ -2,6 +2,7 @@ import { Router, RequestHandler } from 'express';
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { AuthenticatedRequest } from '../types';
+import { logger } from '../logger';
 
 const router = Router();
 
@@ -36,7 +37,7 @@ const getFoods: RequestHandler = async (req, res) => {
 
     res.json(foods || []);
   } catch (err) {
-    console.error('Error fetching foods:', err);
+    logger.error({ err }, 'Error fetching foods');
     res.status(400).json({ error: 'Failed to fetch foods' });
   }
 };
@@ -63,7 +64,7 @@ const updateFood: RequestHandler = async (req, res) => {
 
     res.json(food);
   } catch (err) {
-    console.error('Error updating food:', err);
+    logger.error({ err }, 'Error updating food');
     res.status(400).json({ error: 'Failed to update food' });
   }
 };
@@ -95,7 +96,7 @@ const deleteFood: RequestHandler = async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error('Error deleting food:', err);
+    logger.error({ err }, 'Error deleting food');
     res.status(400).json({ error: 'Failed to delete food' });
   }
 };

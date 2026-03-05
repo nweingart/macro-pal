@@ -2,6 +2,7 @@ import { Router, RequestHandler } from 'express';
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { AuthenticatedRequest } from '../types';
+import { logger } from '../logger';
 
 const router = Router();
 
@@ -97,7 +98,7 @@ const getTrackingSummary: RequestHandler = async (req, res) => {
       daily_data,
     });
   } catch (err) {
-    console.error('Error fetching tracking summary:', err);
+    logger.error({ err }, 'Error fetching tracking summary');
     res.status(400).json({ error: 'Failed to fetch tracking summary' });
   }
 };

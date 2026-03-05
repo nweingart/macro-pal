@@ -65,11 +65,11 @@ function EditFoodModal({ food, visible, onClose, onSave }: EditModalProps) {
     >
       <View style={[modalStyles.container, { backgroundColor: colors.background }]}>
         <View style={[modalStyles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={onClose}>
+          <TouchableOpacity onPress={onClose} accessibilityLabel="Cancel" accessibilityRole="button">
             <Text style={[modalStyles.cancelButton, { color: colors.textSecondary }]}>Cancel</Text>
           </TouchableOpacity>
           <Text style={[modalStyles.title, { color: colors.text }]}>Edit Food</Text>
-          <TouchableOpacity onPress={handleSave}>
+          <TouchableOpacity onPress={handleSave} accessibilityLabel="Save" accessibilityRole="button">
             <Text style={[modalStyles.saveButton, { color: colors.primary }]}>Save</Text>
           </TouchableOpacity>
         </View>
@@ -80,6 +80,7 @@ function EditFoodModal({ food, visible, onClose, onSave }: EditModalProps) {
             style={[modalStyles.input, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.sm, color: colors.text }]}
             value={name}
             onChangeText={setName}
+            accessibilityLabel="Food name"
           />
 
           <Text style={[modalStyles.label, { color: colors.text }]}>Serving Unit</Text>
@@ -89,6 +90,7 @@ function EditFoodModal({ food, visible, onClose, onSave }: EditModalProps) {
             onChangeText={setServingUnit}
             placeholder="e.g., 1 large egg, 1 cup"
             placeholderTextColor={colors.textMuted}
+            accessibilityLabel="Serving unit"
           />
 
           <Text style={[modalStyles.label, { color: colors.text }]}>Calories per Serving</Text>
@@ -97,6 +99,7 @@ function EditFoodModal({ food, visible, onClose, onSave }: EditModalProps) {
             value={calories}
             onChangeText={setCalories}
             keyboardType="numeric"
+            accessibilityLabel="Calories per serving"
           />
 
           <View style={modalStyles.macroRow}>
@@ -107,6 +110,7 @@ function EditFoodModal({ food, visible, onClose, onSave }: EditModalProps) {
                 value={protein}
                 onChangeText={setProtein}
                 keyboardType="numeric"
+                accessibilityLabel="Protein in grams"
               />
             </View>
             <View style={modalStyles.macroField}>
@@ -116,6 +120,7 @@ function EditFoodModal({ food, visible, onClose, onSave }: EditModalProps) {
                 value={carbs}
                 onChangeText={setCarbs}
                 keyboardType="numeric"
+                accessibilityLabel="Carbs in grams"
               />
             </View>
             <View style={modalStyles.macroField}>
@@ -125,6 +130,7 @@ function EditFoodModal({ food, visible, onClose, onSave }: EditModalProps) {
                 value={fat}
                 onChangeText={setFat}
                 keyboardType="numeric"
+                accessibilityLabel="Fat in grams"
               />
             </View>
           </View>
@@ -241,6 +247,7 @@ export function LibraryScreen() {
           placeholderTextColor={colors.textMuted}
           value={searchQuery}
           onChangeText={setSearchQuery}
+          accessibilityLabel="Search foods in your library"
         />
       </View>
 
@@ -252,6 +259,8 @@ export function LibraryScreen() {
             style={[styles.foodCard, { backgroundColor: colors.card, borderRadius: radius.md }, shadows.small]}
             onPress={() => handleEdit(item)}
             onLongPress={() => handleDelete(item)}
+            accessibilityLabel={item.name}
+            accessibilityRole="button"
           >
             <View style={styles.foodHeader}>
               <Text style={[styles.foodName, { color: colors.text }]}>{item.name}</Text>

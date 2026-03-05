@@ -1,31 +1,41 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 
 interface TrendCardProps {
   title: string;
   value: string | number;
   subtitle?: string;
-  trend?: 'up' | 'down' | 'neutral';
   color?: string;
+  /** Percent change vs previous period. Positive = up, negative = down, null = no data. */
+  change?: number | null;
 }
 
-export function TrendCard({ title, value, subtitle, trend, color }: TrendCardProps) {
+export function TrendCard({ title, value, subtitle, color, change }: TrendCardProps) {
   const { colors, radius, shadows } = useTheme();
   const displayColor = color || colors.primary;
-  const trendIcon = trend === 'up' ? '↑' : trend === 'down' ? '↓' : '';
-  const trendColor = trend === 'up' ? colors.success : trend === 'down' ? colors.error : colors.textSecondary;
+
+  const hasChange = change !== undefined && change !== null && isFinite(change);
+  const changePositive = hasChange && change! > 0;
+  const changeNegative = hasChange && change! < 0;
+  const changeColor = changePositive ? colors.success : changeNegative ? colors.error : colors.textMuted;
+  const changeIcon = changePositive ? 'arrow-up' : changeNegative ? 'arrow-down' : null;
+  const changeText = hasChange ? `${Math.abs(Math.round(change!))}%` : null;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.card, borderRadius: radius.md }, shadows.small]}>
       <Text style={[styles.title, { color: colors.textSecondary }]}>{title}</Text>
-      <View style={styles.valueContainer}>
-        <Text style={[styles.value, { color: displayColor }]}>{value}</Text>
-        {trend && (
-          <Text style={[styles.trend, { color: trendColor }]}>{trendIcon}</Text>
+      <Text style={[styles.value, { color: displayColor }]}>{value}</Text>
+      <View style={styles.footer}>
+        {subtitle && <Text style={[styles.subtitle, { color: colors.textMuted }]}>{subtitle}</Text>}
+        {hasChange && changeIcon && changeText && (
+          <View style={[styles.changeBadge, { backgroundColor: changeColor + '15' }]}>
+            <Ionicons name={changeIcon} size={10} color={changeColor} />
+            <Text style={[styles.changeText, { color: changeColor }]}>{changeText}</Text>
+          </View>
         )}
       </View>
-      {subtitle && <Text style={[styles.subtitle, { color: colors.textMuted }]}>{subtitle}</Text>}
     </View>
   );
 }
@@ -39,21 +49,29 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginBottom: 4,
   },
-  valueContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   value: {
     fontSize: 24,
     fontWeight: '700',
   },
-  trend: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 4,
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    gap: 6,
   },
   subtitle: {
     fontSize: 12,
-    marginTop: 4,
+  },
+  changeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    gap: 2,
+  },
+  changeText: {
+    fontSize: 11,
+    fontWeight: '600',
   },
 });

@@ -17,8 +17,8 @@ export const colors = {
 
   // Macros (semantic naming)
   protein: '#3b82f6',
-  carbs: '#fbbf24',
-  fat: '#10b981',
+  carbs: '#f59e0b',
+  fat: '#22c55e',
 
   // Neutrals
   white: '#ffffff',

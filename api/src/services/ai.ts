@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
-import { ParsedFood, MicronutrientAnalysis, FoodForAnalysis, MicronutrientsPerServing } from '../types';
+import { ParsedFood, MicronutrientAnalysis, FoodForAnalysis } from '../types';
+import { logger } from '../logger';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -26,39 +27,6 @@ export function sanitizeUserInput(input: string): string {
 
 // --- Zod schemas ---
 
-const MicronutrientsSchema = z.object({
-  vitamin_a_mcg: z.number().nonnegative().default(0),
-  vitamin_b1_mg: z.number().nonnegative().default(0),
-  vitamin_b2_mg: z.number().nonnegative().default(0),
-  vitamin_b3_mg: z.number().nonnegative().default(0),
-  vitamin_b5_mg: z.number().nonnegative().default(0),
-  vitamin_b6_mg: z.number().nonnegative().default(0),
-  vitamin_b7_mcg: z.number().nonnegative().default(0),
-  vitamin_b9_mcg: z.number().nonnegative().default(0),
-  vitamin_b12_mcg: z.number().nonnegative().default(0),
-  vitamin_c_mg: z.number().nonnegative().default(0),
-  vitamin_d_mcg: z.number().nonnegative().default(0),
-  vitamin_e_mg: z.number().nonnegative().default(0),
-  vitamin_k_mcg: z.number().nonnegative().default(0),
-  calcium_mg: z.number().nonnegative().default(0),
-  iron_mg: z.number().nonnegative().default(0),
-  magnesium_mg: z.number().nonnegative().default(0),
-  phosphorus_mg: z.number().nonnegative().default(0),
-  potassium_mg: z.number().nonnegative().default(0),
-  sodium_mg: z.number().nonnegative().default(0),
-  zinc_mg: z.number().nonnegative().default(0),
-  copper_mg: z.number().nonnegative().default(0),
-  manganese_mg: z.number().nonnegative().default(0),
-  selenium_mcg: z.number().nonnegative().default(0),
-}).default({
-  vitamin_a_mcg: 0, vitamin_b1_mg: 0, vitamin_b2_mg: 0, vitamin_b3_mg: 0,
-  vitamin_b5_mg: 0, vitamin_b6_mg: 0, vitamin_b7_mcg: 0, vitamin_b9_mcg: 0,
-  vitamin_b12_mcg: 0, vitamin_c_mg: 0, vitamin_d_mcg: 0, vitamin_e_mg: 0,
-  vitamin_k_mcg: 0, calcium_mg: 0, iron_mg: 0, magnesium_mg: 0,
-  phosphorus_mg: 0, potassium_mg: 0, sodium_mg: 0, zinc_mg: 0,
-  copper_mg: 0, manganese_mg: 0, selenium_mcg: 0,
-});
-
 const ParsedFoodSchema = z.object({
   name: z.string().min(1),
   servings: z.number().positive().max(100).default(1),
@@ -67,7 +35,6 @@ const ParsedFoodSchema = z.object({
   protein_per_serving: z.number().nonnegative().default(0),
   carbs_per_serving: z.number().nonnegative().default(0),
   fat_per_serving: z.number().nonnegative().default(0),
-  micronutrients: MicronutrientsSchema,
 });
 
 const NutrientValueSchema = z.object({
@@ -107,42 +74,16 @@ const MicronutrientAnalysisSchema = z.object({
   summary: z.string().default('No summary available.'),
 });
 
-const DEFAULT_MICRONUTRIENTS: MicronutrientsPerServing = {
-  vitamin_a_mcg: 0,
-  vitamin_b1_mg: 0,
-  vitamin_b2_mg: 0,
-  vitamin_b3_mg: 0,
-  vitamin_b5_mg: 0,
-  vitamin_b6_mg: 0,
-  vitamin_b7_mcg: 0,
-  vitamin_b9_mcg: 0,
-  vitamin_b12_mcg: 0,
-  vitamin_c_mg: 0,
-  vitamin_d_mcg: 0,
-  vitamin_e_mg: 0,
-  vitamin_k_mcg: 0,
-  calcium_mg: 0,
-  iron_mg: 0,
-  magnesium_mg: 0,
-  phosphorus_mg: 0,
-  potassium_mg: 0,
-  sodium_mg: 0,
-  zinc_mg: 0,
-  copper_mg: 0,
-  manganese_mg: 0,
-  selenium_mcg: 0,
-};
-
 export async function parseFoodInput(input: string): Promise<ParsedFood> {
   const safeInput = sanitizeUserInput(input);
 
   const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 2048,
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 512,
     messages: [
       {
         role: 'user',
-        content: `Parse the following food description and return nutritional information including micronutrients.
+        content: `Parse this food description and return macronutrient information.
 
 Input: "${safeInput}"
 
@@ -154,41 +95,14 @@ Return a JSON object with this exact structure (no markdown, just raw JSON):
   "calories_per_serving": number,
   "protein_per_serving": number in grams,
   "carbs_per_serving": number in grams,
-  "fat_per_serving": number in grams,
-  "micronutrients": {
-    "vitamin_a_mcg": number,
-    "vitamin_b1_mg": number,
-    "vitamin_b2_mg": number,
-    "vitamin_b3_mg": number,
-    "vitamin_b5_mg": number,
-    "vitamin_b6_mg": number,
-    "vitamin_b7_mcg": number,
-    "vitamin_b9_mcg": number,
-    "vitamin_b12_mcg": number,
-    "vitamin_c_mg": number,
-    "vitamin_d_mcg": number,
-    "vitamin_e_mg": number,
-    "vitamin_k_mcg": number,
-    "calcium_mg": number,
-    "iron_mg": number,
-    "magnesium_mg": number,
-    "phosphorus_mg": number,
-    "potassium_mg": number,
-    "sodium_mg": number,
-    "zinc_mg": number,
-    "copper_mg": number,
-    "manganese_mg": number,
-    "selenium_mcg": number
-  }
+  "fat_per_serving": number in grams
 }
 
-Micronutrient estimates should be per serving. Use realistic values based on typical nutrient content of the food.
-
 Examples:
-- "2 eggs" -> name: "Egg", servings: 2, serving_unit: "1 large egg", calories: 78, protein: 6g, with micronutrients like vitamin_a_mcg: 80, vitamin_b12_mcg: 0.6, etc.
-- "bowl of oatmeal" -> name: "Oatmeal", servings: 1, serving_unit: "1 cup cooked", calories: 150, protein: 5g, with micronutrients like iron_mg: 2.1, magnesium_mg: 63, etc.
+- "2 eggs" -> name: "Egg", servings: 2, serving_unit: "1 large egg", calories_per_serving: 78, protein_per_serving: 6, carbs_per_serving: 1, fat_per_serving: 5
+- "bowl of oatmeal" -> name: "Oatmeal", servings: 1, serving_unit: "1 cup cooked", calories_per_serving: 150, protein_per_serving: 5, carbs_per_serving: 27, fat_per_serving: 3
 
-Use your knowledge of nutrition to provide accurate estimates. If quantities are mentioned (like "2 eggs"), set servings accordingly. Return only the JSON object.`,
+If quantities are mentioned (like "2 eggs"), set servings accordingly. Return only the JSON object.`,
       },
     ],
   });
@@ -203,16 +117,12 @@ Use your knowledge of nutrition to provide accurate estimates. If quantities are
     return ParsedFoodSchema.parse(json);
   } catch (err) {
     if (err instanceof z.ZodError) {
-      console.error('AI response failed validation:', err.issues);
+      logger.error({ issues: err.issues }, 'AI response failed validation');
     } else {
-      console.error('Failed to parse AI response:', content.text);
+      logger.error({ response: content.text }, 'Failed to parse AI response');
     }
     throw new Error('Failed to parse food information');
   }
-}
-
-export function getDefaultMicronutrients(): MicronutrientsPerServing {
-  return { ...DEFAULT_MICRONUTRIENTS };
 }
 
 export async function analyzeMicronutrients(foods: FoodForAnalysis[]): Promise<MicronutrientAnalysis> {
@@ -281,9 +191,9 @@ Use standard Daily Values (DV) for adults. Be realistic based on typical nutrien
     return MicronutrientAnalysisSchema.parse(json);
   } catch (err) {
     if (err instanceof z.ZodError) {
-      console.error('Micronutrient response failed validation:', err.issues);
+      logger.error({ issues: err.issues }, 'Micronutrient response failed validation');
     } else {
-      console.error('Failed to parse micronutrient response:', content.text);
+      logger.error({ response: content.text }, 'Failed to parse micronutrient response');
     }
     throw new Error('Failed to analyze micronutrients');
   }
